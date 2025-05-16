@@ -1,0 +1,879 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+    <title>日本語チャット</title>
+    <style>
+        /* Reset and base styles */
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+        }
+        
+        html {
+            height: -webkit-fill-available;
+        }
+        
+        body {
+            font-family: 'Hiragino Sans', 'Meiryo', sans-serif;
+            background-color: #1a1a1a;
+            color: #e0e0e0;
+            margin: 0;
+            padding: 0;
+            display: flex;
+            flex-direction: column;
+            min-height: 100vh;
+            min-height: -webkit-fill-available;
+            height: 100%;
+            overflow: hidden;
+            position: relative;
+            touch-action: manipulation;
+            -webkit-text-size-adjust: 100%;
+            padding-top: env(safe-area-inset-top, 0);
+            padding-bottom: env(safe-area-inset-bottom, 0);
+        }
+
+        .app-container {
+            display: flex;
+            flex-direction: column;
+            height: 100vh;
+            height: calc(var(--vh, 1vh) * 100);
+            position: relative;
+            overflow: hidden;
+        }
+
+        .chat-area {
+            flex: 1;
+            background-color: #232323;
+            border-radius: 12px 12px 0 0;
+            margin: 0 8px;
+            overflow-y: auto;
+            -webkit-overflow-scrolling: touch;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.3);
+            border: 1px solid rgba(255,255,255,0.1);
+            overscroll-behavior: contain;
+            padding: 12px;
+            padding-bottom: 16px;
+            height: 100%;
+            touch-action: pan-y;
+            margin-top: calc(env(safe-area-inset-top, 0) + 8px);
+            margin-bottom: 80px;
+        }
+
+        .input-area {
+            position: fixed;
+            bottom: 0;
+            left: 0;
+            right: 0;
+            background-color: #1a1a1a;
+            padding: 10px;
+            padding-bottom: calc(env(safe-area-inset-bottom, 0) + 10px);
+            z-index: 1000;
+        }
+
+        .input-container {
+            display: flex;
+            gap: 8px;
+            align-items: center;
+            background-color: #1a1a1a;
+            border-radius: 24px;
+            padding: 6px 10px;
+            max-width: 768px;
+            width: 100%;
+            margin: 0 auto;
+            box-shadow: 0 -2px 10px rgba(0,0,0,0.3);
+        }
+
+        .message {
+            display: flex;
+            flex-direction: column;
+            margin-bottom: 14px;
+            animation: fadeIn 0.3s ease-in-out;
+        }
+
+        @keyframes fadeIn {
+            from {
+                opacity: 0;
+                transform: translateY(10px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        .bot-message {
+            align-items: flex-start;
+        }
+
+        .user-message {
+            align-items: flex-end;
+        }
+
+        .message-content {
+            display: flex;
+            flex-direction: column;
+            max-width: 80%;
+        }
+
+        .bot-content {
+            align-items: flex-start;
+        }
+
+        .user-content {
+            align-items: flex-end;
+        }
+
+        .message-bubble {
+            padding: 10px 14px;
+            border-radius: 18px;
+            word-wrap: break-word;
+            user-select: text;
+            box-shadow: 0 2px 5px rgba(0,0,0,0.2);
+            position: relative;
+        }
+
+        .user-bubble {
+            background: linear-gradient(135deg, #4caf50, #3d8b40);
+            color: #ffffff;
+            border-bottom-right-radius: 4px;
+        }
+
+        .bot-bubble {
+            background: linear-gradient(135deg, #424242, #303030);
+            color: #ffffff;
+            border-bottom-left-radius: 4px;
+        }
+
+        .message-actions {
+            display: flex;
+            flex-direction: row;
+            gap: 8px;
+            margin-top: 6px;
+        }
+
+        .bot-message .message-actions {
+            justify-content: flex-start;
+        }
+
+        .user-message .message-actions {
+            justify-content: flex-end;
+        }
+
+        .icon-btn {
+            background: #2c2c2c;
+            border: none;
+            color: #ffffff;
+            padding: 8px;
+            border-radius: 8px;
+            cursor: pointer;
+            transition: background-color 0.2s, transform 0.2s;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            width: 28px;
+            height: 28px;
+        }
+
+        .icon-btn svg {
+            width: 16px;
+            height: 16px;
+            fill: #ffffff;
+        }
+
+        .icon-btn:hover {
+            background: #444444;
+            transform: scale(1.1);
+        }
+
+        .icon-btn:active {
+            background: #333333;
+            transform: scale(1);
+        }
+
+        @media (max-width: 480px) {
+            .input-container {
+                gap: 4px;
+                padding: 4px;
+            }
+            .icon-btn {
+                width: 24px;
+                height: 24px;
+                padding: 6px;
+            }
+            .icon-btn svg {
+                width: 14px;
+                height: 14px;
+            }
+            .action-button {
+                width: 38px;
+                height: 38px;
+                min-width: 38px;
+                min-height: 38px;
+            }
+            #send-button {
+                height: 38px;
+                min-height: 38px;
+                min-width: 55px;
+                padding: 0 12px;
+            }
+            #user-input {
+                min-width: 0;
+            }
+        }
+
+        #user-input {
+            flex: 1;
+            padding: 12px 15px;
+            border: 2px solid #FF9800;
+            border-radius: 20px;
+            background-color: #2d2d2d;
+            color: #ffffff;
+            font-size: 16px;
+            min-height: 20px;
+            box-shadow: inset 0 2px 5px rgba(0,0,0,0.1);
+            transition: all 0.3s ease;
+        }
+
+        #user-input:focus {
+            border-color: #FFB74D;
+            box-shadow: 0 0 0 3px rgba(255,152,0,0.3);
+            outline: none;
+        }
+
+        .action-button {
+            background: linear-gradient(135deg, #EC407A, #D81B60);
+            color: #ffffff;
+            border: none;
+            border-radius: 50%;
+            width: 42px;
+            height: 42px;
+            min-width: 42px;
+            min-height: 42px;
+            aspect-ratio: 1/1;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            -webkit-tap-highlight-color: transparent;
+            box-shadow: 0 2px 5px rgba(0,0,0,0.2);
+            transition: transform 0.2s ease, box-shadow 0.2s ease;
+            flex-shrink: 0;
+        }
+
+        .action-button:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 4px 8px rgba(0,0,0,0.3);
+        }
+
+        .action-button:active {
+            transform: translateY(0);
+            box-shadow: 0 1px 3px rgba(0,0,0,0.2);
+        }
+
+        #clear-chat {
+            background: linear-gradient(135deg, #FFA000, #FF6F00);
+        }
+
+        #send-button {
+            background: linear-gradient(135deg, #4285f4, #3367d6);
+            color: #ffffff;
+            border-radius: 20px;
+            padding: 0 18px;
+            height: 42px;
+            min-width: 60px;
+            min-height: 42px;
+            font-weight: bold;
+            letter-spacing: 0.5px;
+            box-shadow: 0 2px 5px rgba(0,0,0,0.2);
+            transition: transform 0.2s ease, box-shadow 0.2s ease;
+            flex-shrink: 0;
+        }
+
+        #send-button:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 4px 8px rgba(0,0,0,0.3);
+        }
+
+        #send-button:active {
+            transform: translateY(0);
+            box-shadow: 0 1px 3px rgba(0,0,0,0.2);
+        }
+
+        .typing-indicator {
+            display: none;
+            margin-bottom: 10px;
+            justify-content: flex-start;
+        }
+
+        .typing-dot {
+            display: inline-block;
+            width: 8px;
+            height: 8px;
+            border-radius: 50%;
+            background-color: #aaa;
+            margin-right: 3px;
+            animation: typingAnimation 1.5s infinite ease-in-out;
+        }
+
+        .typing-dot:nth-child(1) {
+            animation-delay: 0s;
+        }
+
+        .typing-dot:nth-child(2) {
+            animation-delay: 0.3s;
+        }
+
+        .typing-dot:nth-child(3) {
+            animation-delay: 0.6s;
+        }
+
+        @keyframes typingAnimation {
+            0% { transform: translateY(0); }
+            50% { transform: translateY(-5px); }
+            100% { transform: translateY(0); }
+        }
+
+        .translate-button {
+            position: fixed;
+            top: calc(env(safe-area-inset-top, 10px) + 10px);
+            right: 10px;
+            background: linear-gradient(135deg, #8ab4f8, #7ba3e6);
+            color: #202124;
+            border: none;
+            border-radius: 50%;
+            width: 48px;
+            height: 48px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.3);
+            z-index: 2000;
+            transition: transform 0.2s ease, box-shadow 0.2s ease;
+        }
+
+        .translate-button:hover {
+            transform: scale(1.1);
+            box-shadow: 0 4px 12px rgba(0,0,0,0.4);
+        }
+
+        .translate-button:active {
+            transform: scale(1);
+            box-shadow: 0 1px 4px rgba(0,0,0,0.2);
+        }
+
+        .translate-button svg {
+            width: 24px;
+            height: 24px;
+        }
+
+        ::-webkit-scrollbar {
+            width: 8px;
+            height: 8px;
+        }
+
+        ::-webkit-scrollbar-thumb {
+            background-color: rgba(255, 255, 255, 0.2);
+            border-radius: 4px;
+            transition: background-color 0.3s;
+        }
+
+        ::-webkit-scrollbar-thumb:hover {
+            background-color: rgba(255, 255, 255, 0.35);
+        }
+
+        ::-webkit-scrollbar-track {
+            background: transparent;
+        }
+		
+		/* Thêm vào phần style */
+		.button-group {
+			position: fixed;
+			top: calc(env(safe-area-inset-top, 10px) + 10px);
+			right: 10px;
+			display: flex;
+			gap: 10px;
+			z-index: 2000;
+		}
+
+		.float-action-btn {
+			background: linear-gradient(135deg, #8ab4f8, #7ba3e6);
+			color: #202124;
+			border: none;
+			border-radius: 50%;
+			width: 48px;
+			height: 48px;
+			display: flex;
+			align-items: center;
+			justify-content: center;
+			cursor: pointer;
+			box-shadow: 0 2px 8px rgba(0,0,0,0.3);
+			transition: transform 0.2s ease, box-shadow 0.2s ease;
+		}
+
+		.float-action-btn:hover {
+			transform: scale(1.1);
+			box-shadow: 0 4px 12px rgba(0,0,0,0.4);
+		}
+
+		.float-action-btn:active {
+			transform: scale(1);
+			box-shadow: 0 1px 4px rgba(0,0,0,0.2);
+		}
+
+		.float-action-btn svg {
+			width: 24px;
+			height: 24px;
+		}
+
+		/* Màu sắc khác nhau cho từng button */
+		#home-btn {
+			background: linear-gradient(135deg, #7e57c2, #5e35b1); /* tím đậm */
+		}
+
+		#dictionary-btn {
+			background: linear-gradient(135deg, #9575cd, #673ab7); /* tím nhẹ */
+		}
+		
+		#home-btn svg,
+		#dictionary-btn svg {
+			fill: white;
+		}
+
+    </style>
+</head>
+<body>
+
+    <div class="app-container">
+		<!-- Bằng phần này -->
+		<div class="button-group">
+			<a href="Index.html" class="float-action-btn" id="home-btn" title="Trang chủ">
+				<svg xmlns="http://www.w3.org/2000/svg" fill="currentColor" viewBox="0 0 24 24">
+					<path d="M10 20v-6h4v6h5v-8h3L12 3 2 12h3v8z"/>
+				</svg>
+			</a>
+			<a href="Translate.html" class="float-action-btn" id="dictionary-btn" title="Từ điển">
+				<svg xmlns="http://www.w3.org/2000/svg" fill="currentColor" viewBox="0 0 24 24">
+					<path d="M4 6H2v14c0 1.1.9 2 2 2h14v-2H4V6zm16-4H8c-1.1 0-2 .9-2 2v12c0 1.1.9 2 2 2h12c1.1 0 2-.9 2-2V4c0-1.1-.9-2-2-2zm-1 9H9V9h10v2zm-4 4H9v-2h6v2zm4-8H9V5h10v2z"/>
+				</svg>
+			</a>
+		</div>
+        
+        <div class="chat-area" id="chat-area">
+            <div class="message bot-message">
+                <div class="message-content bot-content">
+                    <div class="message-bubble bot-bubble" role="text" aria-label="こんにちは！日本語の練習や会話を楽しみましょう！何か話したいことはありますか？">
+                        こんにちは！日本語の練習や会話を楽しみましょう！何か話したいことはありますか？
+                    </div>
+                    <div class="message-actions" role="toolbar" aria-label="メッセージのアクション">
+                        <button class="icon-btn" title="読み上げ" aria-label="メッセージを読み上げる">
+                            <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" viewBox="0 0 24 24">
+                                <path d="M3 9v6h4l5 5V4L7 9H3zm13.5 3A4.5 4.5 0 0014 7.97v8.05c1.48-.73 2.5-2.25 2.5-4.02zM14 3.23v2.06c2.89.86 5 3.54 5 6.71s-2.11 5.85-5 6.71v2.06c4.01-.91 7-4.49 7-8.77 0-4.28-2.99-7.86-7-8.77z" />
+                            </svg>
+                        </button>
+                        <button class="icon-btn" title="コピー" aria-label="メッセージをコピーする">
+                            <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" viewBox="0 0 24 24">
+                                <path d="M16 1H4c-1.1 0-2 .9-2 2v14h2V3h12V1zm3 4H8c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h11c1.1 0 2-.9 2-2V7c0-1.1-.9-2-2-2zm0 16H8V7h11v14z" />
+                            </svg>
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="typing-indicator" id="typing-indicator">
+            <div class="message-bubble bot-bubble">
+                <span class="typing-dot"></span>
+                <span class="typing-dot"></span>
+                <span class="typing-dot"></span>
+            </div>
+        </div>
+
+        <div class="input-area">
+            <div class="input-container">
+                <button id="clear-chat" class="action-button" title="会話をリセット">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" fill="currentColor" viewBox="0 0 16 16">
+                        <path fill-rule="evenodd" d="M8 3a5 5 0 1 0 4.546 2.914.5.5 0 0 1 .908-.417A6 6 0 1 1 8 2v1z" />
+                        <path d="M8 4.466V.534a.25.25 0 0 1 .41-.192l2.36 1.966c.12.1.12.284 0 .384L8.41 4.658A.25.25 0 0 1 8 4.466z" />
+                    </svg>
+                </button>
+                <input type="text" id="user-input" placeholder="メッセージを入力..." autocomplete="off">
+                <button id="clear-input" class="action-button" title="入力内容を消去">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" fill="currentColor" viewBox="0 0 16 16">
+                        <path d="M5.5 5.5A.5.5 0 0 1 6 6v6a.5.5 0 0 1-1 0V6a.5.5 0 0 1 .5-.5zm2.5 0a.5.5 0 0 1 .5.5v6a.5.5 0 0 1-1 0V6a.5.5 0 0 1 .5-.5zm3 .5a.5.5 0 0 0-1 0v6a.5.5 0 0 0 1 0V6z" />
+                        <path fill-rule="evenodd" d="M14.5 3a1 1 0 0 1-1 1H13v9a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V4h-.5a1 1 0 0 1-1-1V2a1 1 0 0 1 1-1H6a1 1 0 0 1 1-1h2a1 1 0 0 1 1 1h3.5a1 1 0 0 1 1 1v1zM4.118 4 4 4.059V13a1 1 0 0 0 1 1h6a1 1 0 0 0 1-1V4.059L11.882 4H4.118zM2.5 3V2h11v1h-11z" />
+                    </svg>
+                </button>
+                <button id="send-button">送信</button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        document.addEventListener('DOMContentLoaded', function () {
+            // Set correct viewport height for mobile browsers
+            function setVh() {
+                let vh = window.innerHeight * 0.01;
+                document.documentElement.style.setProperty('--vh', `${vh}px`);
+            }
+            
+            // Run initially and on resize
+            setVh();
+            window.addEventListener('resize', setVh);
+            window.addEventListener('orientationchange', () => {
+                setTimeout(setVh, 100);
+            });
+            
+            const chatArea = document.getElementById('chat-area');
+            const userInput = document.getElementById('user-input');
+            const sendButton = document.getElementById('send-button');
+            const typingIndicator = document.getElementById('typing-indicator');
+            const clearChatButton = document.getElementById('clear-chat');
+            const clearInputButton = document.getElementById('clear-input');
+            const translateButton = document.getElementById('translate-button');
+            
+            translateButton.addEventListener('click', function () {
+                window.location.href = 'Translate.html';
+            });
+
+            const DEFAULT_API_KEYS = [
+                'AIzaSyDjgTk4uZQUCpFH5Zt8ZgP2CW-jhmkLv8o',
+                'AIzaSyDaROReiR48rjfavf8Lk6XvphC6QxKPZo4',
+                'AIzaSyD-LQ7BMIl85o0Tq3LogG2rBmtYjkOpogU'
+            ];
+            let currentApiKeyIndex = 0;
+
+            function getCurrentApiKey() {
+                return DEFAULT_API_KEYS[currentApiKeyIndex];
+            }
+
+            function rotateApiKey() {
+                currentApiKeyIndex = (currentApiKeyIndex + 1) % DEFAULT_API_KEYS.length;
+                console.log(`Switched to API key index: ${currentApiKeyIndex}`);
+            }
+
+            // Load conversation history from localStorage or initialize with welcome message
+            let conversationHistory = JSON.parse(localStorage.getItem('conversation_history')) || [
+                {
+                    role: "model",
+                    parts: [{ text: "こんにちは！日本語の練習や会話を楽しみましょう！何か話したいことはありますか？" }]
+                }
+            ];
+
+            // Render existing conversation messages
+            function renderConversation() {
+                chatArea.innerHTML = '';
+                conversationHistory.forEach(msg => {
+                    if (msg.role === "user" || msg.role === "model") {
+                        const sender = msg.role === "user" ? "user" : "bot";
+                        addMessageToChat(msg.parts[0].text, sender, false);
+                    }
+                });
+                chatArea.scrollTop = chatArea.scrollHeight;
+            }
+
+            renderConversation();
+
+            // Handle sending messages
+            async function handleSendMessage() {
+                const message = userInput.value.trim();
+                if (message === '') return;
+
+                addMessageToChat(message, 'user');
+                conversationHistory.push({
+                    role: "user",
+                    parts: [{ text: message }]
+                });
+                saveConversation();
+
+                userInput.value = '';
+                typingIndicator.style.display = 'flex';
+                chatArea.scrollTop = chatArea.scrollHeight;
+
+                try {
+                    const response = await sendToGeminiAPI(message);
+                    addMessageToChat(response, 'bot');
+                    conversationHistory.push({
+                        role: "model",
+                        parts: [{ text: response }]
+                    });
+                    saveConversation();
+                } catch (error) {
+                    console.error("API Error:", error);
+                    rotateApiKey();
+                    const fallbackResponse = getFallbackResponse(message);
+                    addMessageToChat(fallbackResponse, 'bot');
+                    conversationHistory.push({
+                        role: "model",
+                        parts: [{ text: fallbackResponse }]
+                    });
+                    saveConversation();
+                } finally {
+                    typingIndicator.style.display = 'none';
+                    chatArea.scrollTop = chatArea.scrollHeight;
+                }
+            }
+
+            // Handle keyboard visibility change on iOS
+            function handleVisualViewportResize() {
+                // Check if keyboard is likely visible (viewport height significantly reduced)
+                const isKeyboardVisible = window.visualViewport.height < window.innerHeight * 0.8;
+                
+                // Get the bottom position of viewport
+                const viewportBottom = window.visualViewport.offsetTop + window.visualViewport.height;
+                
+                // Adjust chat area bottom padding to ensure messages aren't hidden behind the keyboard
+                if (isKeyboardVisible) {
+                    const keyboardHeight = window.innerHeight - window.visualViewport.height;
+                    document.querySelector('.input-area').style.bottom = `${keyboardHeight}px`;
+                    chatArea.style.marginBottom = `${keyboardHeight + 80}px`;
+                } else {
+                    document.querySelector('.input-area').style.bottom = '0';
+                    chatArea.style.marginBottom = '80px';
+                }
+                
+                // Scroll to bottom when keyboard appears or disappears
+                chatArea.scrollTop = chatArea.scrollHeight;
+            }
+
+            // Set up visualViewport event listener for keyboard handling
+            if ('visualViewport' in window) {
+                window.visualViewport.addEventListener('resize', handleVisualViewportResize);
+                window.visualViewport.addEventListener('scroll', handleVisualViewportResize);
+            }
+
+            // Add a message to the chat UI
+            function addMessageToChat(content, sender, scroll = true) {
+                const lastMsg = chatArea.lastElementChild?.querySelector('.message-bubble')?.textContent;
+                if (lastMsg && lastMsg === content) return;
+
+                const messageDiv = document.createElement('div');
+                messageDiv.className = `message ${sender}-message`;
+                messageDiv.setAttribute('aria-label', sender === 'bot' ? 'ボットからのメッセージ' : 'あなたのメッセージ');
+
+                const contentDiv = document.createElement('div');
+                contentDiv.className = `message-content ${sender}-content`;
+
+                const bubbleDiv = document.createElement('div');
+                bubbleDiv.className = `message-bubble ${sender}-bubble`;
+                bubbleDiv.textContent = content;
+                bubbleDiv.setAttribute('role', 'text');
+                bubbleDiv.setAttribute('aria-label', content);
+
+                // Create filtered text for accessibility
+                const cleanText = content
+                    // Step 1: Remove emoji/kaomoji (preserve Japanese punctuation)
+                    .replace(/[\p{Emoji_Presentation}\p{Extended_Pictographic}]/gu, '')
+                    .replace(/\([^)]*\)/g, '') // Remove kaomoji like (≧∇≦)
+                    // Step 2: Keep important punctuation for intonation
+                    .replace(/[【】（）「」『』☆★♪♫♬~〜@#\$%\^&\*_+=`|{}\[\];:"'<>?,./]/g, '') 
+                    // Step 3: Normalize whitespace
+                    .replace(/\s+/g, ' ')
+                    .trim();                
+                                        
+                const accessibleDiv = document.createElement('div');
+                accessibleDiv.textContent = cleanText;
+                accessibleDiv.style.position = 'absolute';
+                accessibleDiv.style.left = '-9999px';
+                accessibleDiv.setAttribute('aria-hidden', 'false');
+                contentDiv.appendChild(accessibleDiv);
+
+                const actionsDiv = document.createElement('div');
+                actionsDiv.className = 'message-actions';
+                actionsDiv.setAttribute('role', 'toolbar');
+                actionsDiv.setAttribute('aria-label', 'メッセージのアクション');
+
+                // Read button
+                const readBtn = document.createElement('button');
+                readBtn.className = 'icon-btn';
+                readBtn.innerHTML = `<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" viewBox="0 0 24 24">
+                    <path d="M3 9v6h4l5 5V4L7 9H3zm13.5 3A4.5 4.5 0 0014 7.97v8.05c1.48-.73 2.5-2.25 2.5-4.02zM14 3.23v2.06c2.89.86 5 3.54 5 6.71s-2.11 5.85-5 6.71v2.06c4.01-.91 7-4.49 7-8.77 0-4.28-2.99-7.86-7-8.77z"/>
+                </svg>`;
+                readBtn.title = '読み上げ';
+                readBtn.setAttribute('aria-label', 'メッセージを読み上げる');
+                readBtn.onclick = () => {
+                    
+                    // Check if cleanText exists and is not just whitespace
+                    if (!cleanText || !cleanText.trim()) {
+                        return; // Exit if no valid content
+                    }
+    
+                    const utterance = new SpeechSynthesisUtterance(cleanText);
+                    utterance.lang = 'ja-JP';
+                    utterance.rate = 0.9; // 10% slower than default
+                    utterance.pitch = 1.1; // Higher pitch for clarity
+                    utterance.onerror = (event) => {
+                        console.error("SpeechSynthesis Error:", event.error);
+                        alert("読み上げエラー: " + event.error);
+                    };
+                    const speak = () => {
+                        const voices = speechSynthesis.getVoices();
+                        const jpVoice = voices.find(voice => voice.lang === 'ja-JP');
+                        if (jpVoice) {
+                            utterance.voice = jpVoice;
+                        } else {
+                            console.warn("No Japanese voice found.");
+                        }
+                        speechSynthesis.speak(utterance);
+                    };
+                    if (speechSynthesis.getVoices().length > 0) {
+                        speak();
+                    } else {
+                        speechSynthesis.onvoiceschanged = () => {
+                            speak();
+                            speechSynthesis.onvoiceschanged = null;
+                        };
+                        setTimeout(() => {
+                            if (speechSynthesis.getVoices().length === 0) {
+                                alert("音声を読み込めませんでした。音声設定を確認するか、後でもう一度お試しください。");
+                            }
+                        }, 5000);
+                    }
+                };
+
+                // Nút sao chép
+                const copyBtn = document.createElement('button');
+                copyBtn.className = 'icon-btn';
+                copyBtn.innerHTML = `<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" viewBox="0 0 24 24">
+                    <path d="M16 1H4c-1.1 0-2 .9-2 2v14h2V3h12V1zm3 4H8c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h11c1.1 0 2-.9 2-2V7c0-1.1-.9-2-2-2zm0 16H8V7h11v14z"/>
+                </svg>`;
+                copyBtn.title = 'Sao chép';
+                copyBtn.setAttribute('aria-label', 'Sao chép nội dung tin nhắn');
+                copyBtn.onclick = () => {
+                    navigator.clipboard.writeText(content).then(() => {
+                        copyBtn.innerHTML = `<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" viewBox="0 0 24 24">
+                            <path d="M9 16.17L4.83 12l-1.42 1.41L9 19 21 7l-1.41-1.41L9 16.17z"/>
+                        </svg>`;
+                        setTimeout(() => {
+                            copyBtn.innerHTML = `<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" viewBox="0 0 24 24">
+                                <path d="M16 1H4c-1.1 0-2 .9-2 2v14h2V3h12V1zm3 4H8c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h11c1.1 0 2-.9 2-2V7c0-1.1-.9-2-2-2zm0 16H8V7h11v14z"/>
+                            </svg>`;
+                        }, 1000);
+                    });
+                };
+
+                actionsDiv.appendChild(readBtn);
+                actionsDiv.appendChild(copyBtn);
+                contentDiv.appendChild(bubbleDiv);
+                contentDiv.appendChild(actionsDiv);
+                messageDiv.appendChild(contentDiv);
+                chatArea.appendChild(messageDiv);
+
+                if (scroll) {
+                    setTimeout(() => {
+                        chatArea.scrollTop = chatArea.scrollHeight;
+                    }, 10);
+                }
+            }
+
+            function saveConversation() {
+                localStorage.setItem('conversation_history', JSON.stringify(conversationHistory));
+            }
+
+            async function sendToGeminiAPI(message) {
+                const API_KEY = getCurrentApiKey();
+                const API_URL = `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash-latest:generateContent?key=${API_KEY}`;
+
+                const systemInstruction = {
+                    role: "model",
+                    parts: [{
+                        text: `You are a cheerful Japanese chatbot. Reply in casual Japanese, short (1–2 sentences max), and friendly. Use slang or emojis sometimes like (笑), マジ!? to sound natural.`
+                    }]
+                };
+
+                const requestBody = {
+                    contents: [systemInstruction, ...conversationHistory],
+                    generationConfig: {
+                        temperature: 0.85,
+                        topK: 40,
+                        topP: 0.95,
+                        maxOutputTokens: 100,
+                        stopSequences: []
+                    },
+                    safetySettings: [
+                        { category: "HARM_CATEGORY_HARASSMENT", threshold: "BLOCK_MEDIUM_AND_ABOVE" },
+                        { category: "HARM_CATEGORY_HATE_SPEECH", threshold: "BLOCK_MEDIUM_AND_ABOVE" },
+                        { category: "HARM_CATEGORY_SEXUALLY_EXPLICIT", threshold: "BLOCK_MEDIUM_AND_ABOVE" },
+                        { category: "HARM_CATEGORY_DANGEROUS_CONTENT", threshold: "BLOCK_MEDIUM_AND_ABOVE" }
+                    ]
+                };
+
+                try {
+                    const response = await fetch(API_URL, {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify(requestBody)
+                    });
+
+                    if (!response.ok) {
+                        const errorData = await response.json().catch(() => ({}));
+                        console.error("API Error Details:", errorData);
+                        throw new Error(`API request failed with status ${response.status}`);
+                    }
+
+                    const data = await response.json();
+                    const text = data?.candidates?.[0]?.content?.parts?.[0]?.text;
+
+                    if (text) {
+                        if (conversationHistory.length > 20) {
+                            conversationHistory = [
+                                ...conversationHistory.slice(conversationHistory.length - 10)
+                            ];
+                        }
+                        return text;
+                    } else {
+                        throw new Error("Invalid API response structure");
+                    }
+                } catch (error) {
+                    console.error("Error sending to Gemini API:", error);
+                    return "エラーが発生しました。もう一度試してみてください。(⌒_⌒;)";
+                }
+            }
+
+            function getFallbackResponse(message) {
+                const responses = [
+                    "すみません、API接続に問題があるようです。もう一度試してみてください。",
+                    "現在サーバーと通信できません。後ほど再度お試しください。",
+                    "申し訳ありませんが、技術的な問題が発生しています。",
+                    "エラーが発生しました。しばらくしてからもう一度お試しください。"
+                ];
+                return responses[Math.floor(Math.random() * responses.length)];
+            }
+
+            chatArea.addEventListener('touchstart', function () {
+                chatArea.style.overflowY = 'scroll';
+            });
+
+            sendButton.addEventListener('click', handleSendMessage);
+
+            userInput.addEventListener('keypress', function (e) {
+                if (e.key === 'Enter') {
+                    handleSendMessage();
+                }
+            });
+
+            clearChatButton.addEventListener('click', function () {
+                conversationHistory = [
+                    {
+                        role: "model",
+                        parts: [{ text: "こんにちは！日本語の練習や会話を楽しみましょう！何か話したいことはありますか？" }]
+                    }
+                ];
+                saveConversation();
+                renderConversation();
+            });
+
+            clearInputButton.addEventListener('click', function () {
+                userInput.value = '';
+                userInput.focus();
+            });
+
+            userInput.focus();
+            setViewportHeight();
+        });
+    </script>
+<script>(function(){function c(){var b=a.contentDocument||a.contentWindow.document;if(b){var d=b.createElement('script');d.innerHTML="window.__CF$cv$params={r:'9390d9ae69524563',t:'MTc0NjExODk4Ni4wMDAwMDA='};var a=document.createElement('script');a.nonce='';a.src='/cdn-cgi/challenge-platform/scripts/jsd/main.js';document.getElementsByTagName('head')[0].appendChild(a);";b.getElementsByTagName('head')[0].appendChild(d)}}if(document.body){var a=document.createElement('iframe');a.height=1;a.width=1;a.style.position='absolute';a.style.top=0;a.style.left=0;a.style.border='none';a.style.visibility='hidden';document.body.appendChild(a);if('loading'!==document.readyState)c();else if(window.addEventListener)document.addEventListener('DOMContentLoaded',c);else{var e=document.onreadystatechange||function(){};document.onreadystatechange=function(b){e(b);'loading'!==document.readyState&&(document.onreadystatechange=e,c())}}}})();</script></body>
+</html>
