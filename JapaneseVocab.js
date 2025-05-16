@@ -32,7 +32,28 @@ const progressBarFill = document.querySelector('.progress-bar-fill');
 const restartLearningBtn = document.getElementById('restartLearning');
 const wrongWordsTextarea = document.getElementById('wrongWords');
 const copyAndRelearnBtn = document.getElementById('copyAndRelearn');
+const clearVocabularyBtn = document.getElementById('clearVocabulary');
 
+// Thêm sự kiện click cho nút xóa
+clearVocabularyBtn.addEventListener('click', () => {
+    if (confirm('Bạn có chắc muốn xóa toàn bộ danh sách từ vựng hiện tại không?')) {
+        vocabularyInput.value = '';
+        vocabulary = [];
+        currentIndex = 0;
+        wrongWords = [];
+        currentCycle = 1;
+        
+        // Xóa trạng thái đã lưu
+        localStorage.removeItem('vocabularyLearnerState');
+        
+        // Vô hiệu hóa các tab không cần thiết
+        document.querySelector('[data-tab="learning"]').disabled = true;
+        document.querySelector('[data-tab="wrong"]').disabled = true;
+        
+        // Focus lại vào textarea nhập liệu
+        vocabularyInput.focus();
+    }
+});
 // Save/load learning state from localStorage
 function saveState() {
     const state = {
