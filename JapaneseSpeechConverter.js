@@ -289,38 +289,41 @@ document.addEventListener('DOMContentLoaded', function() {
         }
     }
 
-    async function translateVietnameseToJapanese(text) {
-        const prompt = `Hãy dịch đoạn văn bản sau từ tiếng Việt sang tiếng Nhật một cách tự nhiên:
-        
-        "${text}"
-        
-        Yêu cầu:
-        1. Dịch chính xác nội dung
-        2. Sử dụng ngôn ngữ tự nhiên, phù hợp văn nói
-        3. Thêm các từ ngữ biểu cảm phù hợp
-        4. Giữ nguyên tên riêng, thuật ngữ chuyên môn
-        5. Trả về chỉ văn bản dịch, không giải thích thêm`;
+	async function translateVietnameseToJapanese(text) {
+		const prompt = `Please translate the following Vietnamese text into natural Japanese:
 
-        const response = await fetchFromGemini(prompt);
-        return response.candidates[0].content.parts[0].text;
-    }
+	"${text}"
 
-    async function optimizeForJapaneseSpeech(japaneseText) {
-        const prompt = `Tối ưu đoạn văn sau thành bài phát biểu tiếng Nhật trang trọng:
-        
-        "${japaneseText}"
-        
-        Yêu cầu:
-        1. Thêm mở đầu/kết thúc phù hợp
-        2. Điều chỉnh ngữ điệu tự nhiên hơn
-        3. Chia thành các câu ngắn dễ đọc
-        4. Thêm từ nối phù hợp
-        5. Giữ nguyên nội dung chính
-        6. Trả về chỉ văn bản hoàn thiện`;
+	Requirements:
+	1. Translate the content accurately
+	2. Use simple and clear vocabulary that is suitable for non-native speakers
+	3. Maintain a natural tone as if for a spoken presentation
+	4. Keep all proper nouns and technical terms unchanged
+	5. Return only the translated text, without any explanation or additional information`;
 
-        const response = await fetchFromGemini(prompt);
-        return response.candidates[0].content.parts[0].text;
-    }
+		const response = await fetchFromGemini(prompt);
+		return response.candidates[0].content.parts[0].text;
+	}
+
+	async function optimizeForJapaneseSpeech(japaneseText) {
+		const prompt = `Please optimize the following Japanese text to make it sound like a natural and easy-to-understand speech:
+
+	"${japaneseText}"
+
+	Requirements:
+	1. Add a simple and appropriate greeting at the beginning and a closing at the end
+	2. Use basic, easy-to-understand vocabulary suitable for non-native speakers
+	3. Break the content into about 10 to 15 short and easy-to-follow sentences
+	4. Use simple connectors to make the flow of speech smooth and natural
+	5. Keep the original meaning and core message
+	6. Return only the final optimized speech text, without any explanation
+
+	The goal is to create a short, natural, and easy-to-follow spoken-style speech.`;
+
+		const response = await fetchFromGemini(prompt);
+		return response.candidates[0].content.parts[0].text;
+	}
+
 
     async function fetchFromGemini(promptText) {
         const GEMINI_API_KEY = "AIzaSyD-LQ7BMIl85o0Tq3LogG2rBmtYjkOpogU";
