@@ -359,6 +359,36 @@ startLearningBtn.addEventListener('click', () => {
     });
 });
 
+copyAndRelearnBtn.addEventListener('click', () => {
+    if (wrongWords.length === 0) {
+        alert('Không có từ nào để học lại!');
+        return;
+    }
+
+    const wrongWordsText = wrongWords.map(word =>
+        `${word.kanji}=${word.hiragana}=${word.meaning}`
+    ).join('\n');
+
+    vocabularyInput.value = wrongWordsText;
+
+    // Reset trạng thái
+    currentIndex = 0;
+    currentCycle = 1;
+    wrongWords = [];
+    isChecking = false;
+    shuffleCheckbox.checked = false;
+    cycleCountInput.value = 2;
+    
+    saveState();  // Lưu trạng thái mới
+
+    // Chuyển tab
+    document.querySelector('[data-tab="input"]').click();
+
+    // Focus và thông báo
+    vocabularyInput.focus();
+    alert('Đã sao chép danh sách từ sai. Bạn có thể chỉnh sửa trước khi học lại!');
+});
+
 // Check answer
 async function checkAnswer() {
     // Kiểm tra trạng thái hiện tại
