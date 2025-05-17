@@ -301,20 +301,63 @@ tabs.forEach(tab => {
     });
 });
 
+function finishLearning() {
+    // Dừng các tính năng đang chạy
+    if (isListening) stopVoiceRecognition();
+    speechSynthesis.cancel();
+
+    // Thoát fullscreen
+    if (document.fullscreenElement) {
+        document.exitFullscreen().catch(console.error);
+    }
+
+    // Reset UI
+    answerInput.value = '';
+    resultDisplay.classList.add('hidden');
+    meaningDisplay.textContent = '';
+    progressText.textContent = '0/0';
+    progressBarFill.style.width = '0%';
+    cycleText.textContent = `Chu kỳ: 0/${totalCycles}`;
+    wrongWordsTextarea.value = '';
+
+    // Xử lý từ sai
+    if (wrongWords.length > 0) {
+        document.querySelector('[data-tab="wrong"]').disabled = false;
+        document.querySelector('[data-tab="wrong"]').click();
+        wrongWordsTextarea.value = wrongWords.map(word =>
+            `${word.kanji}=${word.hiragana}=${word.meaning}`
+        ).join('\n');
+    } else {
+        alert('Chúc mừng! Bạn đã học tất cả từ vựng đúng!');
+        document.querySelector('[data-tab="input"]').click();
+    }
+
+    // Xóa trạng thái lưu
+    localStorage.removeItem('vocabularyLearnerState');
+}
+
 // Start learning
 startLearningBtn.addEventListener('click', () => {
+    // Reset UI
+    answerInput.value = '';
+    resultDisplay.classList.add('hidden');
+    meaningDisplay.textContent = '';
+    wrongWordsTextarea.value = '';
+
+    // Validate input
     const inputText = vocabularyInput.value.trim();
     if (!inputText) {
         alert('Vui lòng nhập danh sách từ vựng!');
         return;
     }
 
+    // Process vocabulary
     const lines = inputText.split('\n');
     vocabulary = [];
-
+    
     for (const line of lines) {
         if (!line.trim()) continue;
-
+        
         const parts = line.trim().split('=');
         if (parts.length < 2) {
             alert(`Định dạng không hợp lệ: ${line}\nVui lòng sử dụng định dạng: Kanji=Hiragana=Nghĩa`);
@@ -333,12 +376,9 @@ startLearningBtn.addEventListener('click', () => {
         return;
     }
 
-    totalCycles = parseInt(cycleCountInput.value) || 2;
-    if (totalCycles < 1) totalCycles = 1;
-
-    if (shuffleCheckbox.checked) {
-        shuffleArray(vocabulary);
-    }
+    // Setup learning session
+    totalCycles = Math.max(1, parseInt(cycleCountInput.value) || 2);
+    if (shuffleCheckbox.checked) shuffleArray(vocabulary);
 
     currentIndex = 0;
     currentCycle = 1;
@@ -347,16 +387,15 @@ startLearningBtn.addEventListener('click', () => {
 
     saveState();
 
+    // Start session
     document.querySelector('[data-tab="learning"]').disabled = false;
     document.querySelector('[data-tab="learning"]').click();
-
     updateProgressUI();
     showCurrentWord();
     answerInput.focus();
 
-    document.documentElement.requestFullscreen().catch(err => {
-        console.log(`Error enabling fullscreen: ${err.message}`);
-    });
+    // Enter fullscreen
+    document.documentElement.requestFullscreen().catch(console.error);
 });
 
 copyAndRelearnBtn.addEventListener('click', () => {
@@ -369,9 +408,13 @@ copyAndRelearnBtn.addEventListener('click', () => {
         `${word.kanji}=${word.hiragana}=${word.meaning}`
     ).join('\n');
 
+    // Reset toàn bộ UI và trạng thái
     vocabularyInput.value = wrongWordsText;
-
-    // Reset trạng thái
+    answerInput.value = ''; // Xóa cache ô trả lời
+    resultDisplay.classList.add('hidden'); // Ẩn kết quả kiểm tra trước đó
+    meaningDisplay.textContent = ''; // Xóa nghĩa từ cũ
+    
+    // Reset biến trạng thái
     currentIndex = 0;
     currentCycle = 1;
     wrongWords = [];
@@ -379,14 +422,17 @@ copyAndRelearnBtn.addEventListener('click', () => {
     shuffleCheckbox.checked = false;
     cycleCountInput.value = 2;
     
-    saveState();  // Lưu trạng thái mới
+    // Xóa cache API
+    for (const key in apiCache) {
+        delete apiCache[key];
+    }
+    
+    saveState();
 
-    // Chuyển tab
+    // Chuyển tab và focus
     document.querySelector('[data-tab="input"]').click();
-
-    // Focus và thông báo
     vocabularyInput.focus();
-    alert('Đã sao chép danh sách từ sai. Bạn có thể chỉnh sửa trước khi học lại!');
+    alert('Đã chuẩn bị danh sách từ sai để học lại. Nhấn "Bắt đầu học" khi sẵn sàng!');
 });
 
 // Check answer
@@ -593,25 +639,6 @@ function moveToNextWord() {
     saveState();
 }
 
-function finishLearning() {
-    if (wrongWords.length > 0) {
-        document.querySelector('[data-tab="wrong"]').disabled = false;
-        document.querySelector('[data-tab="wrong"]').click();
-        
-        wrongWordsTextarea.value = wrongWords.map(word =>
-            `${word.kanji}=${word.hiragana}=${word.meaning}`
-        ).join('\n');
-    } else {
-        alert('Chúc mừng! Bạn đã học tất cả từ vựng đúng!');
-        document.querySelector('[data-tab="input"]').click();
-    }
-
-    if (document.fullscreenElement) {
-        document.exitFullscreen();
-    }
-    
-    localStorage.removeItem('vocabularyLearnerState');
-}
 
 // Khởi tạo khi trang tải xong
 window.addEventListener('load', () => {
