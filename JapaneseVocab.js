@@ -389,8 +389,6 @@ async function checkAnswer() {
                 meaningDisplay.textContent = currentWord.meaning;
             }
             
-            // Phát âm từ đúng
-            speakWord(currentWord.hiragana);
             
             // Chuyển sang từ tiếp sau sau 1.5 giây
             setTimeout(() => {
@@ -411,9 +409,6 @@ async function checkAnswer() {
             if (currentWord.meaning) {
                 meaningDisplay.textContent = currentWord.meaning;
             }
-            
-            // Phát âm từ đúng
-            speakWord(currentWord.hiragana);
             
             // Reset input để người dùng thử lại
             answerInput.value = '';
