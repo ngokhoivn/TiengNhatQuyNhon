@@ -361,109 +361,75 @@ startLearningBtn.addEventListener('click', () => {
 
 // Check answer
 async function checkAnswer() {
+    // Kiểm tra trạng thái hiện tại
     if (isChecking || currentIndex >= vocabulary.length) return;
-
+    
+    // Bắt đầu quá trình kiểm tra
     isChecking = true;
     const currentWord = vocabulary[currentIndex];
     const userAnswer = answerInput.value.trim();
-
+    
+    // Hiển thị trạng thái đang kiểm tra
     resultDisplay.textContent = "Đang kiểm tra...";
-    resultDisplay.className = "result";
+    resultDisplay.className = "result checking";
     resultDisplay.classList.remove("hidden");
-
-    const isCorrect = await checkWithAI(userAnswer, currentWord.hiragana);
-
-    if (isCorrect) {
-        resultDisplay.textContent = "✓ Chính xác!";
-        resultDisplay.className = "result correct";
+    meaningDisplay.textContent = "";
+    
+    try {
+        // Kiểm tra đáp án với AI
+        const isCorrect = await checkWithAI(userAnswer, currentWord.hiragana);
         
-        if (currentWord.meaning) {
-            meaningDisplay.textContent = currentWord.meaning;
-        }       
-        
-        answerInput.value = '';
-        
-        setTimeout(() => {
-            moveToNextWord();
-            isChecking = false;
+        if (isCorrect) {
+            // Xử lý khi đáp án đúng
+            resultDisplay.textContent = "✓ Chính xác!";
+            resultDisplay.className = "result correct";
+            
+            // Hiển thị nghĩa nếu có
+            if (currentWord.meaning) {
+                meaningDisplay.textContent = currentWord.meaning;
+            }
+            
+            // Phát âm từ đúng
+            speakWord(currentWord.hiragana);
+            
+            // Chuyển sang từ tiếp sau sau 1.5 giây
+            setTimeout(() => {
+                moveToNextWord();
+                isChecking = false;
+            }, 1500);
+        } else {
+            // Xử lý khi đáp án sai
+            resultDisplay.textContent = `✗ Sai rồi! Đáp án đúng là: ${currentWord.hiragana}`;
+            resultDisplay.className = "result incorrect";
+            
+            // Thêm vào danh sách từ sai nếu chưa có
+            if (!wrongWords.some(word => word.kanji === currentWord.kanji)) {
+                wrongWords.push(currentWord);
+            }
+            
+            // Hiển thị nghĩa
+            if (currentWord.meaning) {
+                meaningDisplay.textContent = currentWord.meaning;
+            }
+            
+            // Phát âm từ đúng
+            speakWord(currentWord.hiragana);
+            
+            // Reset input để người dùng thử lại
+            answerInput.value = '';
             answerInput.focus();
-        }, 2000);
-    } else {
-        resultDisplay.textContent = `✗ Sai rồi! Đáp án đúng là: ${currentWord.hiragana}`;
-        resultDisplay.className = "result incorrect";
-        
-        if (!wrongWords.some(word => word.kanji === currentWord.kanji)) {
-            wrongWords.push(currentWord);
-        }
-        
-        if (currentWord.meaning) {
-            meaningDisplay.textContent = currentWord.meaning;
-        }
-        
-        answerInput.value = '';
-        answerInput.focus();
-        
-        isChecking = false;
-    }
-    
-    saveState();
-}
-
-// AI checking function
-async function checkAnswer() {
-    if (isChecking || currentIndex >= vocabulary.length) return;
-
-    isChecking = true;
-    const currentWord = vocabulary[currentIndex];
-    const userAnswer = answerInput.value.trim();
-
-    // Add loading state
-    resultDisplay.textContent = "Đang kiểm tra...";
-    resultDisplay.className = "result";
-    resultDisplay.classList.remove("hidden");
-
-    // Call AI to check
-    const isCorrect = await checkWithAI(userAnswer, currentWord.hiragana);
-
-    if (isCorrect) {
-        resultDisplay.textContent = "✓ Chính xác!";
-        resultDisplay.className = "result correct";
-        
-        // Show meaning for correct answer too
-        if (currentWord.meaning) {
-            meaningDisplay.textContent = currentWord.meaning;
-        }
-        
-        // Move to next word after success
-        setTimeout(() => {
-            moveToNextWord();
             isChecking = false;
-        }, 1500);
-    } else {
-        resultDisplay.textContent = `✗ Sai rồi! Đáp án đúng là: ${currentWord.hiragana}`;
-        resultDisplay.className = "result incorrect";
-        
-        // Add to wrong words list
-        if (!wrongWords.some(word => word.kanji === currentWord.kanji)) {
-            wrongWords.push(currentWord);
         }
-        
-        // Always show meaning for incorrect answers
-        if (currentWord.meaning) {
-            meaningDisplay.textContent = currentWord.meaning;
-        }
-        
-        // Clear the answer input to allow the user to try again
-        // but keep the hints visible
-        answerInput.value = '';
-        answerInput.focus();
-        
-        // Release the checking lock but keep displays visible
+    } catch (error) {
+        // Xử lý lỗi nếu có
+        console.error("Lỗi khi kiểm tra đáp án:", error);
+        resultDisplay.textContent = "Lỗi khi kiểm tra. Vui lòng thử lại!";
+        resultDisplay.className = "result error";
         isChecking = false;
+    } finally {
+        // Luôn lưu trạng thái dù kết quả thế nào
+        saveState();
     }
-    
-    // Save state after checking
-    saveState();
 }
 
 // Improved AI checking function with better handling of alternative inputs
