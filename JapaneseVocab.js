@@ -37,6 +37,8 @@ const copyAndRelearnBtn = document.getElementById('copyAndRelearn');
 const clearVocabularyBtn = document.getElementById('clearVocabulary');
 const voiceButton = document.getElementById('voiceButton');
 const outputDiv = document.getElementById('output');
+const speakCurrentWord = document.getElementById('speakCurrentWord');
+
 const speakButton = document.getElementById('speakButton');
 // Thêm sự kiện click cho nút kiểm tra
 if (checkAnswerBtn) {
@@ -101,13 +103,6 @@ if (speakButton) {
     });
 }
 
-// Phím tắt F2 để phát âm
-document.addEventListener('keydown', (e) => {
-    if (e.key === 'F2') {
-        e.preventDefault();
-        if (speakButton) speakButton.click();
-    }
-});
 
 // Hàm nhận diện giọng nói
 function setupVoiceRecognition() {
@@ -426,7 +421,7 @@ async function checkWithAI(userInput, correctHiragana) {
         console.log("Latin input detected, treating as romaji");
     }
 
-    const prompt = `...`; // Giữ nguyên prompt từ code cũ
+	const prompt = `So sánh xem từ người dùng nhập "${userInput}" có giống với từ đúng "${correctHiragana}" về mặt phát âm và nghĩa trong tiếng Nhật không. Trả lời "true" nếu giống, "false" nếu không. Chỉ trả lời true hoặc false.`;
 
     try {
         const currentApiKey = apiKeys[0];
