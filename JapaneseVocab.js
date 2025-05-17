@@ -6,7 +6,6 @@ let currentCycle = 1;
 let totalCycles = 2;
 let isChecking = false;
 let speechSynthesis = window.speechSynthesis;
-let recognition = null;
 
 const apiCache = {};
 // API keys declaration
@@ -38,106 +37,276 @@ const copyAndRelearnBtn = document.getElementById('copyAndRelearn');
 const clearVocabularyBtn = document.getElementById('clearVocabulary');
 const voiceButton = document.getElementById('voiceButton');
 const outputDiv = document.getElementById('output');
-const speakButton = document.getElementById('speakButton');
-speakButton.addEventListener('click', () => {
-    if (currentIndex < vocabulary.length) {
-        const word = vocabulary[currentIndex].hiragana || vocabulary[currentIndex].kanji;
-        const utterance = new SpeechSynthesisUtterance(word);
-        utterance.lang = 'ja-JP';
-        speechSynthesis.speak(utterance);
+
+// Khai báo biến recognition toàn cục
+let recognition = null;
+let isListening = false;
+let interimResult = "";
+let recognitionTimeout = null;
+
+// Cập nhật hàm nhận diện giọng nói
+function setupVoiceRecognition() {
+    if (!recognition) {
+        try {
+            // Tạo đối tượng nhận diện giọng nói
+            recognition = new (window.SpeechRecognition || window.webkitSpeechRecognition)();
+            recognition.lang = 'ja-JP';
+            recognition.interimResults = true; // Bật kết quả tạm thời để hiển thị ngay lập tức
+            recognition.continuous = true; // Cho phép nhận diện liên tục
+            recognition.maxAlternatives = 3; // Lấy nhiều kết quả thay thế
+
+            // Xử lý sự kiện khi bắt đầu nhận diện
+            recognition.onstart = () => {
+                isListening = true;
+                voiceButton.classList.add('recording');
+                outputDiv.textContent = "Đang nghe...";
+                outputDiv.classList.remove('hidden');
+                
+                // Xóa timeout trước đó nếu có
+                if (recognitionTimeout) {
+                    clearTimeout(recognitionTimeout);
+                }
+            };
+
+            // Xử lý sự kiện có lỗi
+            recognition.onerror = (event) => {
+                console.error('Recognition error:', event.error);
+                
+                if (event.error === 'no-speech') {
+                    outputDiv.textContent = "Không nghe thấy gì. Vui lòng nói to hơn.";
+                } else if (event.error === 'network') {
+                    outputDiv.textContent = "Lỗi kết nối mạng. Vui lòng kiểm tra kết nối.";
+                } else {
+                    outputDiv.textContent = "Lỗi: " + event.error;
+                }
+                
+                if (isListening) {
+                    // Tự động thử lại sau 1 giây nếu không phải lỗi nghiêm trọng
+                    if (event.error !== 'not-allowed' && event.error !== 'service-not-allowed') {
+                        setTimeout(() => {
+                            if (isListening) {
+                                try {
+                                    recognition.start();
+                                } catch (e) {
+                                    console.error("Không thể khởi động lại recognition:", e);
+                                }
+                            }
+                        }, 1000);
+                    } else {
+                        stopVoiceRecognition();
+                    }
+                }
+            };
+
+            // Xử lý sự kiện kết thúc nhận diện
+			recognition.onend = () => {
+				if (isListening) {
+					try {
+						// Thêm delay trước khi khởi động lại
+						setTimeout(() => {
+							if (isListening && !recognitionTimeout) {
+								recognition.start();
+							}
+						}, 500);
+					} catch (e) {
+						console.error("Không thể khởi động lại recognition:", e);
+						stopVoiceRecognition();
+					}
+				} else {
+					voiceButton.classList.remove('recording');
+				}
+			};
+
+            // Xử lý kết quả nhận diện
+			recognition.onresult = (event) => {
+				let finalTranscript = '';
+				let interimTranscript = '';
+				
+				for (let i = event.resultIndex; i < event.results.length; i++) {
+					const result = event.results[i];
+					const transcript = result[0].transcript;
+					
+					if (result.isFinal) {
+						finalTranscript += transcript;
+						// Ưu tiên sử dụng kết quả cuối cùng
+						interimResult = ''; // Xóa kết quả tạm thời khi có kết quả cuối
+					} else {
+						interimTranscript += transcript;
+					}
+				}
+				
+				// Chỉ cập nhật kết quả tạm thời nếu chưa có kết quả cuối
+				if (interimTranscript && !finalTranscript) {
+					interimResult = interimTranscript;
+					outputDiv.textContent = "Đang nghe: " + interimTranscript;
+				}
+				
+				if (finalTranscript) {
+					outputDiv.textContent = "Đã nhận: " + finalTranscript;
+					answerInput.value = finalTranscript;
+					
+					// Đặt timeout dài hơn (3 giây) để cho phép nói liên tục
+					if (recognitionTimeout) {
+						clearTimeout(recognitionTimeout);
+					}
+					recognitionTimeout = setTimeout(() => {
+						stopVoiceRecognition();
+					}, 3000);
+				}
+			};
+			recognition.onresult = (event) => {
+				let finalTranscript = '';
+				let interimTranscript = '';
+				
+				for (let i = event.resultIndex; i < event.results.length; i++) {
+					const result = event.results[i];
+					const transcript = result[0].transcript;
+					
+					if (result.isFinal) {
+						finalTranscript += transcript;
+						// Ưu tiên sử dụng kết quả cuối cùng
+						interimResult = ''; // Xóa kết quả tạm thời khi có kết quả cuối
+					} else {
+						interimTranscript += transcript;
+					}
+				}
+				
+				// Chỉ cập nhật kết quả tạm thời nếu chưa có kết quả cuối
+				if (interimTranscript && !finalTranscript) {
+					interimResult = interimTranscript;
+					outputDiv.textContent = "Đang nghe: " + interimTranscript;
+				}
+				
+				if (finalTranscript) {
+					outputDiv.textContent = "Đã nhận: " + finalTranscript;
+					answerInput.value = finalTranscript;
+					
+					// Đặt timeout dài hơn (3 giây) để cho phép nói liên tục
+					if (recognitionTimeout) {
+						clearTimeout(recognitionTimeout);
+					}
+					recognitionTimeout = setTimeout(() => {
+						stopVoiceRecognition();
+					}, 3000);
+				}
+			};
+            
+            console.log("Voice recognition setup completed");
+        } catch (error) {
+            console.error("Error setting up voice recognition:", error);
+            alert("Trình duyệt của bạn không hỗ trợ nhận diện giọng nói hoặc bạn chưa cấp quyền. Vui lòng sử dụng Chrome, Safari hoặc Edge mới nhất.");
+        }
     }
-});
-const speakCurrentWordBtn = document.getElementById('speakCurrentWord');
-if (speakCurrentWordBtn) {
-    speakCurrentWordBtn.addEventListener('click', () => {
-        if (currentIndex < vocabulary.length) {
-            const word = vocabulary[currentIndex].hiragana || vocabulary[currentIndex].kanji;
-            speakText(word);
+}
+
+// Hàm để bắt đầu nhận diện giọng nói
+function startVoiceRecognition() {
+    setupVoiceRecognition();
+    
+    if (recognition) {
+        try {
+            isListening = true;
+            recognition.start();
+        } catch (error) {
+            console.error("Error starting voice recognition:", error);
+            alert("Không thể bắt đầu nhận diện giọng nói. Vui lòng làm mới trang và thử lại.");
+        }
+    }
+}
+
+// Hàm dừng nhận diện giọng nói
+function stopVoiceRecognition() {
+    if (recognition) {
+        try {
+            isListening = false;
+            recognition.stop();
+            
+            // Nếu có kết quả tạm thời và không có kết quả cuối cùng, sử dụng kết quả tạm thời
+            if (interimResult && !answerInput.value) {
+                answerInput.value = interimResult;
+                outputDiv.textContent = "Đã nhận: " + interimResult;
+            }
+            
+            interimResult = "";
+
+            voiceButton.classList.remove('recording');
+            
+            // Xóa timeout nếu có
+            if (recognitionTimeout) {
+                clearTimeout(recognitionTimeout);
+                recognitionTimeout = null;
+            }
+        } catch (error) {
+            console.error("Error stopping voice recognition:", error);
+        }
+    }
+}
+
+// Cập nhật lại hàm toggle
+function toggleVoiceRecognition() {
+    if (isListening) {
+        stopVoiceRecognition();
+    } else {
+        startVoiceRecognition();
+    }
+}
+
+// Khởi tạo nút nhận diện giọng nói
+function initVoiceButton() {
+    // Thêm biểu tượng vào nút
+    voiceButton.innerHTML = '<i class="fas fa-microphone"></i>';
+    voiceButton.title = "Nhấn để bắt đầu nhận diện giọng nói (F3)";
+    
+    // Thêm sự kiện click
+    voiceButton.addEventListener('click', toggleVoiceRecognition);
+    
+       
+    // Cập nhật output div
+    outputDiv.classList.add('hidden');
+}
+
+// Kiểm tra sự hỗ trợ của trình duyệt
+function checkBrowserSupport() {
+    if (!('SpeechRecognition' in window || 'webkitSpeechRecognition' in window)) {
+        console.warn("Browser does not support speech recognition");
+        voiceButton.disabled = true;
+        voiceButton.title = "Trình duyệt của bạn không hỗ trợ nhận diện giọng nói";
+        return false;
+    }
+    return true;
+}
+
+// Hàm khởi tạo
+function initVoiceRecognition() {
+    // Kiểm tra sự hỗ trợ
+    if (!checkBrowserSupport()) return;
+    
+    // Khởi tạo giao diện
+    initVoiceButton();
+    
+    // Thêm sự kiện phím tắt
+    document.addEventListener('keydown', (e) => {
+        if (e.key === 'F3') {
+            e.preventDefault();
+            toggleVoiceRecognition();
+        } else if (e.key === 'Escape' && isListening) {
+            e.preventDefault();
+            stopVoiceRecognition();
         }
     });
-}
-
-// Phím tắt F2 để phát âm
-document.addEventListener('keydown', (e) => {
-    if (e.key === 'F2') {
-        e.preventDefault();
-        speakButton.click();
-    }
-});
-
-// Thêm sự kiện click cho nút phát âm
-speakButton.addEventListener('click', () => {
-    if (currentIndex >= vocabulary.length) return;
     
-    const currentWord = vocabulary[currentIndex];
-    speakText(currentWord.hiragana);
-});
-
-// Thêm sự kiện click cho nút nhận diện giọng nói
-voiceButton.addEventListener('click', toggleVoiceRecognition);
-
-// Thêm phím tắt F2 cho phát âm
-document.addEventListener('keydown', (e) => {
-    if (e.key === 'F2') {
-        e.preventDefault();
-        speakButton.click();
-    } else if (e.key === 'F3') {
-        e.preventDefault();
-        voiceButton.click();
-    }
-});
-
-// Hàm phát âm
-function speakText(text) {
-    if (speechSynthesis.speaking) {
-        speechSynthesis.cancel();
-    }
-    
-    const utterance = new SpeechSynthesisUtterance(text);
-    utterance.lang = 'ja-JP';
-    utterance.rate = 0.8;
-    speechSynthesis.speak(utterance);
+    console.log("Voice recognition initialized");
 }
 
-// Hàm nhận diện giọng nói
-function toggleVoiceRecognition() {
-    if (!recognition) {
-        recognition = new (window.SpeechRecognition || window.webkitSpeechRecognition)();
-        recognition.lang = 'ja-JP';
-        recognition.interimResults = false;
-        recognition.maxAlternatives = 1;
+// Khởi tạo khi trang đã tải xong
+window.addEventListener('DOMContentLoaded', initVoiceRecognition);
 
-        recognition.onstart = () => {
-            voiceButton.classList.add('recording');
-            outputDiv.textContent = "Đang nghe...";
-            outputDiv.classList.remove('hidden');
-        };
-
-        recognition.onerror = (event) => {
-            console.error('Recognition error:', event.error);
-            outputDiv.textContent = "Lỗi: " + event.error;
-            voiceButton.classList.remove('recording');
-        };
-
-        recognition.onend = () => {
-            voiceButton.classList.remove('recording');
-        };
-
-        recognition.onresult = (event) => {
-            const transcript = event.results[0][0].transcript;
-            outputDiv.textContent = "Đã nhận: " + transcript;
-            answerInput.value = transcript;
-            recognition.stop();
-        };
+// Làm sạch khi thoát trang
+window.addEventListener('beforeunload', () => {
+    if (recognition && isListening) {
+        stopVoiceRecognition();
     }
-
-    if (voiceButton.classList.contains('recording')) {
-        recognition.stop();
-        voiceButton.classList.remove('recording');
-    } else {
-        recognition.start();
-    }
-}
+});
 
 // Thêm sự kiện click cho nút xóa
 clearVocabularyBtn.addEventListener('click', () => {
