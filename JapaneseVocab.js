@@ -410,33 +410,102 @@ async function checkAnswer() {
 }
 
 // AI checking function
+async function checkAnswer() {
+    if (isChecking || currentIndex >= vocabulary.length) return;
+
+    isChecking = true;
+    const currentWord = vocabulary[currentIndex];
+    const userAnswer = answerInput.value.trim();
+
+    // Add loading state
+    resultDisplay.textContent = "Đang kiểm tra...";
+    resultDisplay.className = "result";
+    resultDisplay.classList.remove("hidden");
+
+    // Call AI to check
+    const isCorrect = await checkWithAI(userAnswer, currentWord.hiragana);
+
+    if (isCorrect) {
+        resultDisplay.textContent = "✓ Chính xác!";
+        resultDisplay.className = "result correct";
+        
+        // Show meaning for correct answer too
+        if (currentWord.meaning) {
+            meaningDisplay.textContent = currentWord.meaning;
+        }
+        
+        // Move to next word after success
+        setTimeout(() => {
+            moveToNextWord();
+            isChecking = false;
+        }, 1500);
+    } else {
+        resultDisplay.textContent = `✗ Sai rồi! Đáp án đúng là: ${currentWord.hiragana}`;
+        resultDisplay.className = "result incorrect";
+        
+        // Add to wrong words list
+        if (!wrongWords.some(word => word.kanji === currentWord.kanji)) {
+            wrongWords.push(currentWord);
+        }
+        
+        // Always show meaning for incorrect answers
+        if (currentWord.meaning) {
+            meaningDisplay.textContent = currentWord.meaning;
+        }
+        
+        // Clear the answer input to allow the user to try again
+        // but keep the hints visible
+        answerInput.value = '';
+        answerInput.focus();
+        
+        // Release the checking lock but keep displays visible
+        isChecking = false;
+    }
+    
+    // Save state after checking
+    saveState();
+}
+
+// Improved AI checking function with better handling of alternative inputs
 async function checkWithAI(userInput, correctHiragana) {
     const cacheKey = `${userInput}:${correctHiragana}`;
+
+    // Check cache
     if (apiCache[cacheKey] !== undefined) {
         return apiCache[cacheKey];
     }
     
+    // Handle romaji/latin alphabet input
     let processedInput = userInput;
     if (/^[a-zA-Z0-9\s,.?!;:'"()\-]+$/.test(userInput)) {
-        console.log("Latin input detected, treating as romaji");
+        // If input is only Latin characters, consider it romaji
+        // This is just for checking - we'll still validate with AI
+        console.log("Latin alphabet input detected, treating as romaji");
     }
 
-	const prompt = `
-Act as a Japanese teacher. Compare the student's answer "${processedInput}" with the correct answer "${correctHiragana}".
+    const prompt = `
+Evaluate Japanese answer flexibility. Act as a Japanese language teacher evaluating student responses.
 
-Accept:
-- Same meaning even with different word order
-- Hiragana, Katakana, or Kanji
-- Equivalent particles (は/へ/に/を)
-- Minor grammatical variations if meaning is preserved
+Rules for evaluation:
+1. ACCEPT different ways of expressing the same meaning in Japanese
+2. ACCEPT both hiragana and katakana representations of the same sound
+3. ACCEPT romaji (Latin alphabet) input that correctly represents the Japanese sounds
+4. ACCEPT particle variations where appropriate (は/wa, へ/e, を/o)
+5. ACCEPT answers with different word order if grammatically correct
+6. For sentences, focus on meaning equivalence rather than exact character matching
+7. For vocabulary words, be stricter about pronunciation but accept alternative forms
 
-Is the student's answer correct? Reply only "true" or "false".
+Compare:
+Student answer: ${processedInput}  
+Expected answer: ${correctHiragana}
+
+Considering all the above rules, is the student's answer correct? Output only 'true' or 'false'.
 `;
 
-
-
     try {
-        const currentApiKey = apiKeys[0];
+        // Use API key from array (can be rotated if needed)
+        const currentApiKey = apiKeys[0]; // Logic for rotating API keys could be added
+
         const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash-latest:generateContent?key=${currentApiKey}`, {
             method: "POST",
             headers: { "Content-Type": "application/json" },
@@ -446,19 +515,25 @@ Is the student's answer correct? Reply only "true" or "false".
         });
 
         const data = await response.json();
+
+        // Process result from API
         if (data && data.candidates && data.candidates[0].content) {
             const resultText = data.candidates[0].content.parts[0].text.trim().toLowerCase();
             const isCorrect = resultText === "true";
             apiCache[cacheKey] = isCorrect;
             return isCorrect;
         } else {
-            console.error("Invalid API response:", data);
+            console.error("Invalid response from API:", data);
+            
+            // Fallback to direct comparison if API fails
             const normalizedInput = processedInput.toLowerCase().replace(/\s+/g, '');
             const normalizedCorrect = correctHiragana.toLowerCase().replace(/\s+/g, '');
             return normalizedInput === normalizedCorrect;
         }
     } catch (error) {
-        console.error("API error:", error);
+        console.error("Error calling Gemini API:", error);
+        
+        // Fallback to direct comparison if API fails
         const normalizedInput = processedInput.toLowerCase().replace(/\s+/g, '');
         const normalizedCorrect = correctHiragana.toLowerCase().replace(/\s+/g, '');
         return normalizedInput === normalizedCorrect;
