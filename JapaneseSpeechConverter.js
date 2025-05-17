@@ -42,9 +42,37 @@ document.addEventListener('DOMContentLoaded', function() {
         elements.clearBtn.addEventListener('click', clearText);
         elements.copyBtn.addEventListener('click', copyToClipboard);
         elements.saveBtn.addEventListener('click', saveToHistory);
-        elements.speakBtn.addEventListener('click', speakText);
         elements.clearHistoryBtn.addEventListener('click', clearHistory);
+		// Sửa sự kiện click
+		elements.speakBtn.addEventListener('click', toggleSpeech);
     }
+	
+	function toggleSpeech() {
+		if (speechSynthesis.speaking) {
+			speechSynthesis.cancel();
+			updateButtonState(elements.speakBtn, 'volume-up', '', '', 0, ' Đọc văn bản');
+		} else {
+			const text = elements.japaneseTextDiv.textContent;
+			speakJapanese(text);
+		}
+	}
+
+	function init() {
+		// Load voices khi khởi tạo (cần thiết cho một số trình duyệt)
+		speechSynthesis.onvoiceschanged = function() {
+			console.log('Voices loaded:', speechSynthesis.getVoices());
+		};
+		
+		// Nếu voices đã sẵn sàng
+		if (speechSynthesis.getVoices().length > 0) {
+			console.log('Voices already available:', speechSynthesis.getVoices());
+		}
+
+		setupEventListeners();
+		updateHistoryUI();
+		updateStatus('Nhập văn bản tiếng Việt để chuyển đổi...', 'info');
+	}
+
 
     // Tab switching logic
     function switchTab(clickedTab) {
@@ -144,36 +172,46 @@ document.addEventListener('DOMContentLoaded', function() {
         }
     }
 
-    // Speak Japanese text
-    function speakText() {
-        const text = elements.japaneseTextDiv.textContent;
-        if (!text) return;
-        
-        if (!window.speechSynthesis) {
-            updateStatus('Trình duyệt không hỗ trợ đọc văn bản', 'error');
-            return;
-        }
-        
-        speechSynthesis.cancel();
-        
-        const utterance = new SpeechSynthesisUtterance(text);
-        utterance.lang = 'ja-JP';
-        
-        // Try to find Japanese female voice
-        const japaneseVoice = speechSynthesis.getVoices().find(voice => 
-            voice.lang === 'ja-JP' && voice.name.includes('Female')
-        );
-        if (japaneseVoice) utterance.voice = japaneseVoice;
-        
-        // Update button during speech
-        updateButtonState(elements.speakBtn, 'volume-up', '', '', 0, ' Đang phát...');
-        
-        utterance.onend = () => {
-            updateButtonState(elements.speakBtn, 'volume-up', '', '', 0, ' Đọc văn bản');
-        };
-        
-        speechSynthesis.speak(utterance);
-    }
+    // Speak Japanese text	
+	function speakJapanese(text) {
+		if (!text || typeof text !== 'string') {
+			updateStatus('Không có văn bản để đọc', 'error');
+			return;
+		}
+
+		if (!window.speechSynthesis) {
+			updateStatus('Trình duyệt không hỗ trợ đọc văn bản', 'error');
+			return;
+		}
+
+		// Hủy phát âm hiện tại nếu đang nói
+		speechSynthesis.cancel();
+
+		const utterance = new SpeechSynthesisUtterance(text);
+		utterance.lang = 'ja-JP';
+
+		// Chọn giọng tiếng Nhật (ưu tiên giọng nữ nếu có)
+		const voices = speechSynthesis.getVoices();
+		const japaneseVoice = voices.find(v => 
+			v.lang === 'ja-JP' && v.name.includes('Female')
+		) || voices.find(v => v.lang === 'ja-JP');
+		
+		if (japaneseVoice) {
+			utterance.voice = japaneseVoice;
+		}
+
+		// Cập nhật trạng thái khi bắt đầu đọc
+		elements.speakBtn.classList.add('btn-reading');
+		updateButtonState(elements.speakBtn, 'volume-up', '#ff4081', 'white', 0, ' Đang đọc...');
+		
+		// Sự kiện khi kết thúc đọc hoặc bị hủy
+		utterance.onend = utterance.onerror = () => {
+			elements.speakBtn.classList.remove('btn-reading');
+			updateButtonState(elements.speakBtn, 'volume-up', '', '', 0, ' Đọc văn bản');
+		};
+
+		speechSynthesis.speak(utterance);
+	}
 
     // Save to history
     function saveToHistory() {

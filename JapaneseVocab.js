@@ -5,6 +5,9 @@ let wrongWords = [];
 let currentCycle = 1;
 let totalCycles = 2;
 let isChecking = false;
+let speechSynthesis = window.speechSynthesis;
+let recognition = null;
+
 const apiCache = {};
 // API keys declaration
 const apiKeys = [
@@ -33,6 +36,108 @@ const restartLearningBtn = document.getElementById('restartLearning');
 const wrongWordsTextarea = document.getElementById('wrongWords');
 const copyAndRelearnBtn = document.getElementById('copyAndRelearn');
 const clearVocabularyBtn = document.getElementById('clearVocabulary');
+const voiceButton = document.getElementById('voiceButton');
+const outputDiv = document.getElementById('output');
+const speakButton = document.getElementById('speakButton');
+speakButton.addEventListener('click', () => {
+    if (currentIndex < vocabulary.length) {
+        const word = vocabulary[currentIndex].hiragana || vocabulary[currentIndex].kanji;
+        const utterance = new SpeechSynthesisUtterance(word);
+        utterance.lang = 'ja-JP';
+        speechSynthesis.speak(utterance);
+    }
+});
+const speakCurrentWordBtn = document.getElementById('speakCurrentWord');
+if (speakCurrentWordBtn) {
+    speakCurrentWordBtn.addEventListener('click', () => {
+        if (currentIndex < vocabulary.length) {
+            const word = vocabulary[currentIndex].hiragana || vocabulary[currentIndex].kanji;
+            speakText(word);
+        }
+    });
+}
+
+// Phím tắt F2 để phát âm
+document.addEventListener('keydown', (e) => {
+    if (e.key === 'F2') {
+        e.preventDefault();
+        speakButton.click();
+    }
+});
+
+// Thêm sự kiện click cho nút phát âm
+speakButton.addEventListener('click', () => {
+    if (currentIndex >= vocabulary.length) return;
+    
+    const currentWord = vocabulary[currentIndex];
+    speakText(currentWord.hiragana);
+});
+
+// Thêm sự kiện click cho nút nhận diện giọng nói
+voiceButton.addEventListener('click', toggleVoiceRecognition);
+
+// Thêm phím tắt F2 cho phát âm
+document.addEventListener('keydown', (e) => {
+    if (e.key === 'F2') {
+        e.preventDefault();
+        speakButton.click();
+    } else if (e.key === 'F3') {
+        e.preventDefault();
+        voiceButton.click();
+    }
+});
+
+// Hàm phát âm
+function speakText(text) {
+    if (speechSynthesis.speaking) {
+        speechSynthesis.cancel();
+    }
+    
+    const utterance = new SpeechSynthesisUtterance(text);
+    utterance.lang = 'ja-JP';
+    utterance.rate = 0.8;
+    speechSynthesis.speak(utterance);
+}
+
+// Hàm nhận diện giọng nói
+function toggleVoiceRecognition() {
+    if (!recognition) {
+        recognition = new (window.SpeechRecognition || window.webkitSpeechRecognition)();
+        recognition.lang = 'ja-JP';
+        recognition.interimResults = false;
+        recognition.maxAlternatives = 1;
+
+        recognition.onstart = () => {
+            voiceButton.classList.add('recording');
+            outputDiv.textContent = "Đang nghe...";
+            outputDiv.classList.remove('hidden');
+        };
+
+        recognition.onerror = (event) => {
+            console.error('Recognition error:', event.error);
+            outputDiv.textContent = "Lỗi: " + event.error;
+            voiceButton.classList.remove('recording');
+        };
+
+        recognition.onend = () => {
+            voiceButton.classList.remove('recording');
+        };
+
+        recognition.onresult = (event) => {
+            const transcript = event.results[0][0].transcript;
+            outputDiv.textContent = "Đã nhận: " + transcript;
+            answerInput.value = transcript;
+            recognition.stop();
+        };
+    }
+
+    if (voiceButton.classList.contains('recording')) {
+        recognition.stop();
+        voiceButton.classList.remove('recording');
+    } else {
+        recognition.start();
+    }
+}
 
 // Thêm sự kiện click cho nút xóa
 clearVocabularyBtn.addEventListener('click', () => {
@@ -353,23 +458,30 @@ async function checkWithAI(userInput, correctHiragana) {
     }
 
     const prompt = `
-Evaluate Japanese answer flexibility. Act as a Japanese language teacher evaluating student responses.
+Act as a strict but fair Japanese language teacher. Evaluate if a student's answer matches the expected vocabulary.
 
-Rules for evaluation:
-1. ACCEPT different ways of expressing the same meaning in Japanese
-2. ACCEPT both hiragana and katakana representations of the same sound
-3. ACCEPT romaji (Latin alphabet) input that correctly represents the Japanese sounds
-4. ACCEPT particle variations where appropriate (は/wa, へ/e, を/o)
-5. ACCEPT answers with different word order if grammatically correct
-6. For sentences, focus on meaning equivalence rather than exact character matching
-7. For vocabulary words, be stricter about pronunciation but accept alternative forms
+Student's answer may be in:
+- Hiragana
+- Katakana
+- Kanji (if semantically equivalent)
+- Romaji (if phonetically accurate)
 
-Compare:
+Evaluation rules:
+1. ACCEPT Hiragana, Katakana, Kanji, or Romaji if they represent the same Japanese word.
+2. ACCEPT small spelling variations or character forms if meaning or sound is preserved.
+3. ACCEPT particles (は/wa, を/o) when appropriate.
+4. IGNORE punctuation or spacing differences.
+5. For vocabulary checking (not full sentences), focus on pronunciation and meaning match.
+6. DO NOT reject Kanji just because it is not Hiragana.
+7. If the meaning is the same word, regardless of script, it's correct.
+
+Now compare:
 Student answer: ${processedInput}  
 Expected answer: ${correctHiragana}
 
-Considering all the above rules, is the student's answer correct? Output only 'true' or 'false'.
+Considering all the above, is the student's answer correct? Output only 'true' or 'false'.
 `;
+
 
     try {
         // Use API key from array (can be rotated if needed)

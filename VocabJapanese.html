@@ -1,7 +1,7 @@
+
 <!DOCTYPE html>
 <html lang="ja">
 <head>
-
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Học từ vựng tiếng Nhật</title>
@@ -116,6 +116,7 @@
             font-size: 16px;
             font-weight: bold;
             margin-right: 10px;
+            margin-top: 5px;
             transition: all 0.2s ease;
         }
 
@@ -167,6 +168,33 @@
             text-align: center;
             margin: 30px 0;
             min-height: 100px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+        
+        .kanji-container {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+        
+        .speak-button {
+            margin-left: 15px;
+            background-color: var(--accent);
+            width: 40px;
+            height: 40px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            transition: all 0.2s ease;
+        }
+        
+        .speak-button:hover {
+            transform: scale(1.1);
+            background-color: #02b9a8;
         }
 
         .result {
@@ -198,6 +226,7 @@
         .button-container {
             display: flex;
             justify-content: center;
+            flex-wrap: wrap;
             margin-top: 20px;
         }
 
@@ -249,33 +278,6 @@
             border-bottom: 1px solid #444;
         }
 		
-		.home-button {
-			position: fixed;
-			top: 20px;
-			left: 20px;
-			z-index: 101;
-			background-color: #8a2be2; /* Màu tím */
-			color: white;
-			width: 50px;
-			height: 50px;
-			border-radius: 50%;
-			display: flex;
-			align-items: center;
-			justify-content: center;
-			box-shadow: 0 2px 10px rgba(0,0,0,0.2);
-			transition: all 0.3s ease;
-		}
-
-		.home-button:hover {
-			background-color: #7b1fa2; /* Màu tím đậm hơn khi hover */
-			transform: scale(1.1);
-		}
-
-		.home-button i {
-			font-size: 20px;
-		}
-		
-		/* Trong phần style của file HTML */
 		#clearVocabulary {
 			background-color: var(--error) !important;
 			color: white;
@@ -284,14 +286,104 @@
 		#clearVocabulary:hover {
 			background-color: #b00020 !important;
 		}
+        
+        /* Styles for Voice Recognition Button */
+        .voice-rec-button {
+            background-color: #7b1fa2;
+            color: white;
+            width: 40px;
+            height: 40px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            transition: all 0.2s ease;
+        }
+        
+        .voice-rec-button:hover {
+            transform: scale(1.1);
+            background-color: #6a1b9a;
+        }
+        
+        .voice-rec-button.recording {
+            background-color: var(--error);
+            animation: pulse 1.5s infinite;
+        }
+        
+        @keyframes pulse {
+            0% {
+                box-shadow: 0 0 0 0 rgba(207, 102, 121, 0.7);
+            }
+            70% {
+                box-shadow: 0 0 0 10px rgba(207, 102, 121, 0);
+            }
+            100% {
+                box-shadow: 0 0 0 0 rgba(207, 102, 121, 0);
+            }
+        }
+        
+        .input-container {
+            position: relative;
+            display: flex;
+            align-items: center;
+        }
+        
+        .input-container input {
+            width: calc(100% - 50px);
+            margin-bottom: 0;
+        }
+        
+        .input-container .voice-rec-button {
+            margin-left: 10px;
+        }
+
+        #output {
+            margin-top: 10px;
+            padding: 10px;
+            background-color: #2d2d2d;
+            border-radius: 4px;
+            min-height: 40px;
+        }
+		
+		.home-button-container {
+			display: flex;
+			justify-content: center;
+			margin-bottom: 15px;
+		}
+
+		.btn-home {
+			display: flex;
+			align-items: center;
+			justify-content: center;
+			padding: 8px 16px;
+			border-radius: 8px;
+			background-color: #7c4dff; /* Màu tím */
+			color: white;
+			text-decoration: none;
+			font-weight: 500;
+			gap: 8px;
+			transition: all 0.3s ease;
+			border: none;
+			cursor: pointer;
+		}
+
+		.btn-home:hover {
+			background-color: #5c19e6; /* Màu tím đậm khi hover */
+			transform: translateY(-2px);
+			box-shadow: 0 2px 8px rgba(0, 0, 0, 0.2);
+		}		
     </style>
 </head>
 <body>
-	<a href="index.html" class="home-button fade-in">
-		<i class="fas fa-home"></i>
-	</a>
 
     <div class="container">
+		<div class="home-button-container">
+			<a href="index.html" class="btn-home">
+				<i class="fas fa-home"></i>
+				Trang chủ
+			</a>
+		</div>
         <h1>Học từ vựng tiếng Nhật</h1>
 
         <div class="tabs">
@@ -303,7 +395,6 @@
         <!-- Tab Nhập từ vựng -->
         <div class="tab-content active" id="input">
             <div class="input-group">
-			
                 <label for="vocabularyInput">Nhập danh sách từ vựng (định dạng: Kanji=Hiragana=Nghĩa tiếng Việt)</label>
                 <textarea id="vocabularyInput" placeholder="赤い=あかい=đỏ&#10;青い=あおい=xanh lam&#10;白い=しろい=trắng"></textarea>
             </div>
@@ -320,7 +411,7 @@
 
             <div class="button-container">
                 <button id="startLearning">Bắt đầu học</button>
-				<button id="clearVocabulary" style="background-color: var(--error);">Xóa danh sách</button>
+				<button id="clearVocabulary">Xóa danh sách</button>
             </div>
 
             <div class="shortcuts">
@@ -342,6 +433,14 @@
                         <span>Bật/tắt toàn màn hình</span>
                         <span class="shortcut-key">F11</span>
                     </div>
+                    <div class="shortcut">
+                        <span>Phát âm từ vựng</span>
+                        <span class="shortcut-key">F2</span>
+                    </div>
+                    <div class="shortcut">
+                        <span>Nhận diện giọng nói</span>
+                        <span class="shortcut-key">F3</span>
+                    </div>
                 </div>
             </div>
         </div>
@@ -357,12 +456,31 @@
                     <div class="progress-bar-fill" style="width: 0%"></div>
                 </div>
             </div>
+			
+			<div style="text-align: right; margin-top: 10px;">
+				<button id="speakCurrentWord">
+					<i class="fas fa-volume-up"></i> Phát âm 
+				</button>
+			</div>
 
-            <div class="kanji-display" id="kanjiDisplay"></div>
+            <div class="kanji-display" id="kanjiDisplay">
+                <div class="kanji-container">
+                    <span id="kanjiText"></span>
+                    <div class="speak-button" id="speakButton" title="Phát âm">
+                        <i class="fas fa-volume-up"></i>
+                    </div>
+                </div>
+            </div>
 
             <div class="input-group">
                 <label for="answerInput">Nhập Hiragana:</label>
-                <input type="text" id="answerInput" placeholder="Nhập phiên âm Hiragana">
+                <div class="input-container">
+                    <input type="text" id="answerInput" placeholder="Nhập phiên âm Hiragana">
+                    <div class="voice-rec-button" id="voiceButton" title="Nhận diện giọng nói">
+                        <i class="fas fa-microphone"></i>
+                    </div>
+                </div>
+                <div id="output" class="hidden"></div>
             </div>
 
             <div class="button-container">
@@ -397,6 +515,7 @@
     </footer>
 
     <script src="JapaneseVocab.js"></script>
+	<script src="RecognizeTTS.js"></script>
     <script>(function () { function c() { var b = a.contentDocument || a.contentWindow.document; if (b) { var d = b.createElement('script'); d.innerHTML = "window.__CF$cv$params={r:'93f80fe0fa7f04e4',t:'MTc0NzIwMTIzOS4wMDAwMDA='};var a=document.createElement('script');a.nonce='';a.src='/cdn-cgi/challenge-platform/scripts/jsd/main.js';document.getElementsByTagName('head')[0].appendChild(a);"; b.getElementsByTagName('head')[0].appendChild(d) } } if (document.body) { var a = document.createElement('iframe'); a.height = 1; a.width = 1; a.style.position = 'absolute'; a.style.top = 0; a.style.left = 0; a.style.border = 'none'; a.style.visibility = 'hidden'; document.body.appendChild(a); if ('loading' !== document.readyState) c(); else if (window.addEventListener) document.addEventListener('DOMContentLoaded', c); else { var e = document.onreadystatechange || function () { }; document.onreadystatechange = function (b) { e(b); 'loading' !== document.readyState && (document.onreadystatechange = e, c()) } } } })();</script>
 </body>
 </html>

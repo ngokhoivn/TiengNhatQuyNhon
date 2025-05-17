@@ -208,6 +208,12 @@
             transform: translateY(-2px);
             box-shadow: var(--shadow-sm);
         }
+		
+		.btn-reading {
+			animation: pulse 1.5s infinite;
+			background-color: var(--primary-color) !important;
+			color: white !important;
+		}
 
         .btn-accent {
             background-color: var(--accent-color);
@@ -447,12 +453,47 @@
                 width: 100%;
             }
         }
+		
+		.home-button-container {
+			display: flex;
+			justify-content: center;
+			margin-bottom: 15px;
+		}
+
+		.btn-home {
+			display: flex;
+			align-items: center;
+			justify-content: center;
+			padding: 8px 16px;
+			border-radius: 8px;
+			background-color: #7c4dff; /* Màu tím */
+			color: white;
+			text-decoration: none;
+			font-weight: 500;
+			gap: 8px;
+			transition: all 0.3s ease;
+			border: none;
+			cursor: pointer;
+		}
+
+		.btn-home:hover {
+			background-color: #5c19e6; /* Màu tím đậm khi hover */
+			transform: translateY(-2px);
+			box-shadow: 0 2px 8px rgba(0, 0, 0, 0.2);
+		}		
+		
     </style>
 </head>
 <body>
     <div class="app-container">
         <div class="app-header">
-            <h1 class="app-title">Vietnamese - Japanese Speech Converter</h1>
+			<div class="home-button-container">
+				<a href="index.html" class="btn-home">
+					<i class="fas fa-home"></i>
+					Trang chủ
+				</a>
+			</div>
+            <h1 class="app-title">Tạo bài thuyết trình Tiếng Nhật</h1>
             <p class="app-subtitle">Chuyển văn bản tiếng Việt thành bài phát biểu chuẩn tiếng Nhật</p>
             
             <div class="flags">
@@ -535,7 +576,7 @@
         </div>
 
         <div class="footer">
-            <div>© 2025 Vietnamese - Japanese Speech Converter</div>
+            <div>© 2025 Tiếng Nhật Online & Offline Quy Nhơn</div>
             <div>Phiên bản 1.0</div>
         </div>
     </div>
