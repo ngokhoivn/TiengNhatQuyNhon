@@ -774,22 +774,22 @@
                 const API_KEY = getCurrentApiKey();
                 const API_URL = `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash-latest:generateContent?key=${API_KEY}`;
 
-                const systemInstruction = {
-                    role: "model",
-                    parts: [{
-                        text: `You are a cheerful Japanese chatbot. Reply in casual Japanese, short (1–2 sentences max), and friendly. Use slang or emojis sometimes like (笑), マジ!? to sound natural.`
-                    }]
-                };
+			const systemInstruction = {
+				role: "model",
+				parts: [{
+					text: `You are a cheerful Japanese chatbot. Reply in VERY SHORT casual Japanese (30 words max), using only 1 sentence. Use emojis/kaomoji like (笑), マジ!? but keep it extremely concise. Never explain anything unless asked directly.`
+				}]
+			};
 
                 const requestBody = {
                     contents: [systemInstruction, ...conversationHistory],
-                    generationConfig: {
-                        temperature: 0.85,
-                        topK: 40,
-                        topP: 0.95,
-                        maxOutputTokens: 100,
-                        stopSequences: []
-                    },
+					generationConfig: {
+						temperature: 0.85,
+						topK: 40,
+						topP: 0.95,
+						maxOutputTokens: 70,  // Giảm từ 100 xuống 50
+						stopSequences: []
+					},
                     safetySettings: [
                         { category: "HARM_CATEGORY_HARASSMENT", threshold: "BLOCK_MEDIUM_AND_ABOVE" },
                         { category: "HARM_CATEGORY_HATE_SPEECH", threshold: "BLOCK_MEDIUM_AND_ABOVE" },
