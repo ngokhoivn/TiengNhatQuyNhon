@@ -38,6 +38,26 @@ const clearVocabularyBtn = document.getElementById('clearVocabulary');
 const voiceButton = document.getElementById('voiceButton');
 const outputDiv = document.getElementById('output');
 const speakButton = document.getElementById('speakButton');
+// Thêm sự kiện click cho nút kiểm tra
+if (checkAnswerBtn) {
+    checkAnswerBtn.addEventListener('click', checkAnswer);
+}
+
+// Thêm phím tắt Enter để kiểm tra
+document.addEventListener('keydown', (e) => {
+    if (e.key === 'Enter' && document.getElementById('learning').classList.contains('active')) {
+        e.preventDefault();
+        checkAnswer();
+    }
+});
+
+if (speakCurrentWord) {
+    speakCurrentWord.addEventListener('click', () => {
+        if (currentIndex < vocabulary.length) {
+            speakWord(vocabulary[currentIndex].hiragana);
+        }
+    });
+}
 
 // Speech recognition variables
 let recognition = null;
@@ -47,23 +67,29 @@ let recognitionTimeout = null;
 
 // Hàm phát âm từ
 function speakWord(text) {
-    if (speechSynthesis) {
-        // Dừng phát âm hiện tại nếu có
-        speechSynthesis.cancel();
-        
-        const utterance = new SpeechSynthesisUtterance(text);
-        utterance.lang = 'ja-JP';
-        utterance.rate = 0.9; // Tốc độ phát âm
-        
-        // Tìm giọng đọc tiếng Nhật nếu có
-        const voices = speechSynthesis.getVoices();
-        const japaneseVoice = voices.find(voice => voice.lang.includes('ja') || voice.lang.includes('JP'));
-        if (japaneseVoice) {
-            utterance.voice = japaneseVoice;
-        }
-        
-        speechSynthesis.speak(utterance);
+    if (!speechSynthesis) {
+        console.error("Speech synthesis not supported");
+        return;
     }
+
+    // Dừng phát âm hiện tại nếu có
+    speechSynthesis.cancel();
+    
+    const utterance = new SpeechSynthesisUtterance(text);
+    utterance.lang = 'ja-JP';
+    utterance.rate = 0.9;
+    
+    // Tìm giọng đọc tiếng Nhật
+    const voices = speechSynthesis.getVoices();
+    const japaneseVoice = voices.find(voice => 
+        voice.lang.includes('ja') || voice.lang.includes('JP')
+    );
+    
+    if (japaneseVoice) {
+        utterance.voice = japaneseVoice;
+    }
+    
+    speechSynthesis.speak(utterance);
 }
 
 // Khởi tạo nút phát âm
@@ -358,10 +384,7 @@ async function checkAnswer() {
         
         if (currentWord.meaning) {
             meaningDisplay.textContent = currentWord.meaning;
-        }
-        
-        // Phát âm từ đúng
-        speakWord(currentWord.hiragana);
+        }       
         
         answerInput.value = '';
         
