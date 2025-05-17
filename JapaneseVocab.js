@@ -421,7 +421,7 @@ async function checkWithAI(userInput, correctHiragana) {
         console.log("Latin input detected, treating as romaji");
     }
 
-	const prompt = `So sánh xem từ người dùng nhập "${userInput}" có giống với từ đúng "${correctHiragana}" về mặt phát âm và nghĩa trong tiếng Nhật không. Trả lời "true" nếu giống, "false" nếu không. Chỉ trả lời true hoặc false.`;
+	const prompt = `So sánh xem từ hoặc câu người dùng nhập "${userInput}" có giống với từ đúng "${correctHiragana}" về mặt **phát âm** và **nghĩa tổng thể** trong tiếng Nhật, bất kể được viết bằng kanji, hiragana hay katakana, và bất kể thứ tự từ hoặc trợ từ như「へ」「に」「まで」có thể thay đổi. Trả lời "true" nếu giống, "false" nếu không. Chỉ trả lời true hoặc false.`;
 
     try {
         const currentApiKey = apiKeys[0];
