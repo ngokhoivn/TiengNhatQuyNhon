@@ -128,67 +128,30 @@ function setupVoiceRecognition() {
 					
 					if (result.isFinal) {
 						finalTranscript += transcript;
-						// Ưu tiên sử dụng kết quả cuối cùng
-						interimResult = ''; // Xóa kết quả tạm thời khi có kết quả cuối
+						// Thêm vào kết quả hiện tại thay vì ghi đè
+						if (answerInput.value) {
+							answerInput.value += ' ' + finalTranscript;
+						} else {
+							answerInput.value = finalTranscript;
+						}
+						outputDiv.textContent = "Đã nhận: " + answerInput.value;
 					} else {
 						interimTranscript += transcript;
 					}
 				}
 				
-				// Chỉ cập nhật kết quả tạm thời nếu chưa có kết quả cuối
+				// Hiển thị kết quả tạm thời
 				if (interimTranscript && !finalTranscript) {
-					interimResult = interimTranscript;
 					outputDiv.textContent = "Đang nghe: " + interimTranscript;
 				}
 				
-				if (finalTranscript) {
-					outputDiv.textContent = "Đã nhận: " + finalTranscript;
-					answerInput.value = finalTranscript;
-					
-					// Đặt timeout dài hơn (3 giây) để cho phép nói liên tục
-					if (recognitionTimeout) {
-						clearTimeout(recognitionTimeout);
-					}
-					recognitionTimeout = setTimeout(() => {
-						stopVoiceRecognition();
-					}, 3000);
+				// Đặt timeout dài hơn (3 giây) để cho phép nói liên tục
+				if (recognitionTimeout) {
+					clearTimeout(recognitionTimeout);
 				}
-			};
-			recognition.onresult = (event) => {
-				let finalTranscript = '';
-				let interimTranscript = '';
-				
-				for (let i = event.resultIndex; i < event.results.length; i++) {
-					const result = event.results[i];
-					const transcript = result[0].transcript;
-					
-					if (result.isFinal) {
-						finalTranscript += transcript;
-						// Ưu tiên sử dụng kết quả cuối cùng
-						interimResult = ''; // Xóa kết quả tạm thời khi có kết quả cuối
-					} else {
-						interimTranscript += transcript;
-					}
-				}
-				
-				// Chỉ cập nhật kết quả tạm thời nếu chưa có kết quả cuối
-				if (interimTranscript && !finalTranscript) {
-					interimResult = interimTranscript;
-					outputDiv.textContent = "Đang nghe: " + interimTranscript;
-				}
-				
-				if (finalTranscript) {
-					outputDiv.textContent = "Đã nhận: " + finalTranscript;
-					answerInput.value = finalTranscript;
-					
-					// Đặt timeout dài hơn (3 giây) để cho phép nói liên tục
-					if (recognitionTimeout) {
-						clearTimeout(recognitionTimeout);
-					}
-					recognitionTimeout = setTimeout(() => {
-						stopVoiceRecognition();
-					}, 3000);
-				}
+				recognitionTimeout = setTimeout(() => {
+					stopVoiceRecognition();
+				}, 3000);
 			};
             
             console.log("Voice recognition setup completed");
@@ -572,16 +535,20 @@ async function checkAnswer() {
         resultDisplay.textContent = "✓ Chính xác!";
         resultDisplay.className = "result correct";
         
-        // Show meaning for correct answer too
+        // Show meaning
         if (currentWord.meaning) {
             meaningDisplay.textContent = currentWord.meaning;
         }
+        
+        // Clear input
+        answerInput.value = '';
         
         // Move to next word after success
         setTimeout(() => {
             moveToNextWord();
             isChecking = false;
-        }, 1500);
+            answerInput.focus(); // Thêm focus khi chuyển từ
+        }, 2000); // Tăng thời gian lên 2s
     } else {
         resultDisplay.textContent = `✗ Sai rồi! Đáp án đúng là: ${currentWord.hiragana}`;
         resultDisplay.className = "result incorrect";
@@ -591,21 +558,19 @@ async function checkAnswer() {
             wrongWords.push(currentWord);
         }
         
-        // Always show meaning for incorrect answers
+        // Show meaning
         if (currentWord.meaning) {
             meaningDisplay.textContent = currentWord.meaning;
         }
         
-        // Clear the answer input to allow the user to try again
-        // but keep the hints visible
+        // Clear input but keep focus
         answerInput.value = '';
         answerInput.focus();
         
-        // Release the checking lock but keep displays visible
         isChecking = false;
     }
     
-    // Save state after checking
+    // Save state
     saveState();
 }
 
