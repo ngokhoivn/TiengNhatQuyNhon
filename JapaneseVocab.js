@@ -422,8 +422,17 @@ async function checkWithAI(userInput, correctHiragana) {
     }
 
 	const prompt = `
-As a Japanese teacher, compare: "${processedInput}" vs "${correctHiragana}". Accept different word order, kanji/hiragana/katakana variations, and equivalent particles if meaning and pronunciation are the same. Reply only with "true" or "false".
+Act as a Japanese teacher. Compare the student's answer "${processedInput}" with the correct answer "${correctHiragana}".
+
+Accept:
+- Same meaning even with different word order
+- Hiragana, Katakana, or Kanji
+- Equivalent particles (は/へ/に/を)
+- Minor grammatical variations if meaning is preserved
+
+Is the student's answer correct? Reply only "true" or "false".
 `;
+
 
 
     try {
