@@ -185,7 +185,7 @@ function setupVoiceRecognition() {
                 }
                 recognitionTimeout = setTimeout(() => {
                     stopVoiceRecognition();
-                }, 3000);
+                }, 1500);
             };
         } catch (error) {
             console.error("Error setting up voice recognition:", error);
@@ -388,7 +388,6 @@ async function checkAnswer() {
             if (currentWord.meaning) {
                 meaningDisplay.textContent = currentWord.meaning;
             }
-            
             
             // Chuyển sang từ tiếp sau sau 1.5 giây
             setTimeout(() => {
