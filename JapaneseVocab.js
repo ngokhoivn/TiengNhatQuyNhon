@@ -527,6 +527,16 @@ function updateProgressUI() {
 }
 
 function moveToNextWord() {
+    // Reset phần nhận diện giọng nói
+    if (outputDiv) {
+        outputDiv.textContent = "";
+        outputDiv.classList.add('hidden');
+    }
+    
+    // Reset kết quả tạm thời
+    interimResult = "";
+    
+    // Chuyển sang từ tiếp theo
     currentIndex++;
 
     if (currentIndex >= vocabulary.length) {
@@ -539,14 +549,17 @@ function moveToNextWord() {
         }
     }
 
+    // Reset UI cho từ mới
     resultDisplay.classList.add('hidden');
     meaningDisplay.textContent = '';
     answerInput.value = '';
 
+    // Cập nhật UI
     updateProgressUI();
     showCurrentWord();
     answerInput.focus();
     
+    // Lưu trạng thái
     saveState();
 }
 
