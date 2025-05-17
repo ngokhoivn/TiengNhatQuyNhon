@@ -421,7 +421,17 @@ async function checkWithAI(userInput, correctHiragana) {
         console.log("Latin input detected, treating as romaji");
     }
 
-	const prompt = `So sánh xem từ hoặc câu người dùng nhập "${userInput}" có giống với từ đúng "${correctHiragana}" về mặt **phát âm** và **nghĩa tổng thể** trong tiếng Nhật, bất kể được viết bằng kanji, hiragana hay katakana, và bất kể thứ tự từ hoặc trợ từ như「へ」「に」「まで」có thể thay đổi. Trả lời "true" nếu giống, "false" nếu không. Chỉ trả lời true hoặc false.`;
+	const prompt = `
+Act as a Japanese teacher. Compare the student's answer "${processedInput}" with the correct answer "${correctHiragana}".
+
+Accept:
+- Same meaning even with different word order
+- Hiragana, Katakana, or Kanji
+- Equivalent particles (は/へ/に/を)
+- Minor grammatical variations if meaning is preserved
+
+Is the student's answer correct? Reply only "true" or "false".
+`;
 
     try {
         const currentApiKey = apiKeys[0];
