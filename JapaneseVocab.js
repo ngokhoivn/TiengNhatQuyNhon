@@ -7,7 +7,9 @@ let totalCycles = 2;
 let isChecking = false;
 let speechSynthesis = window.speechSynthesis;
 let autoSpeakEnabled = true; // New variable to control auto-speaking
+let lastCheckTime = 0;
 
+const DEBOUNCE_TIME = 1000; // 1 giây
 const apiCache = {};
 // API keys declaration
 const apiKeys = [
@@ -555,83 +557,107 @@ copyAndRelearnBtn.addEventListener('click', () => {
 
 // Improved check answer function
 async function checkAnswer() {
-    if (isChecking || currentIndex >= vocabulary.length || vocabulary.length === 0) return;
+    const now = Date.now();
+    if (isChecking || now - lastCheckTime < DEBOUNCE_TIME) return;
+    lastCheckTime = now;
     
     isChecking = true;
+    disableButtons();
+    
+    const currentWord = vocabulary[currentIndex];
+    const userAnswer = answerInput.value.trim();
+    
+    try {
+        // Hiển thị trạng thái kiểm tra
+        showCheckingUI();
+        
+        // Tự động phát âm nếu được bật
+        if (autoSpeakEnabled) {
+            speakWord(currentWord.hiragana);
+        }
+        
+        // Kiểm tra đáp án
+        const isCorrect = await checkAnswerWithFallback(userAnswer, currentWord);
+        
+        if (isCorrect) {
+            await handleCorrectAnswer(currentWord);
+        } else {
+            await handleIncorrectAnswer(currentWord);
+        }
+    } catch (error) {
+        console.error("Unexpected error in checkAnswer:", error);
+        resultDisplay.textContent = "Lỗi hệ thống! Vui lòng thử lại";
+        resultDisplay.className = "result error";
+    } finally {
+        // Luôn enable lại nút và lưu trạng thái
+        if (!isChecking) { // Chỉ enable nếu không chuyển từ
+            enableButtons();
+        }
+        saveState();
+    }
+}
+
+// Các hàm helper mới
+function disableButtons() {
     checkAnswerBtn.disabled = true;
     skipWordBtn.disabled = true;
+}
 
-    const currentWord = vocabulary[currentIndex];
-    // Speak the word if auto-speak is enabled
-    if (autoSpeakEnabled) {
-        speakWord(currentWord.hiragana);
-    }
-    
-    const userAnswer = answerInput.value.trim();
+function enableButtons() {
+    checkAnswerBtn.disabled = false;
+    skipWordBtn.disabled = false;
+}
 
+function showCheckingUI() {
     resultDisplay.textContent = "Đang kiểm tra...";
     resultDisplay.className = "result checking";
     resultDisplay.classList.remove("hidden");
+    meaningDisplay.textContent = "";
+}
 
+async function checkAnswerWithFallback(userAnswer, currentWord) {
     try {
-        const isCorrect = await checkWithAI(userAnswer, currentWord.hiragana);
-
-        if (isCorrect) {
-            resultDisplay.textContent = "✓ Chính xác!";
-            resultDisplay.className = "result correct";
-            meaningDisplay.textContent = currentWord.meaning || "";
-            
-            // Wait before moving to next word
-            await new Promise(resolve => setTimeout(resolve, 1000));
-            await moveToNextWord();
-        } else {
-            resultDisplay.textContent = `✗ Sai rồi! Đáp án đúng là: ${currentWord.hiragana}`;
-            resultDisplay.className = "result incorrect";
-            meaningDisplay.textContent = currentWord.meaning || "";
-            
-            if (!wrongWords.some(word => word.kanji === currentWord.kanji)) {
-                wrongWords.push(currentWord);
-            }
-            
-            answerInput.value = '';
-            interimResult = "";
-            isChecking = false; // Reset checking state for incorrect answers
-        }
+        return await checkWithAI(userAnswer, currentWord.hiragana);
     } catch (error) {
-        console.error("Lỗi khi kiểm tra:", error);
-        resultDisplay.textContent = "Lỗi kết nối. Đang kiểm tra offline...";
-        resultDisplay.className = "result error";
-        
-        // Perform a simple fallback check
+        console.error("API check failed, using fallback:", error);
         const normalizedInput = userAnswer.toLowerCase().replace(/\s+/g, '');
         const normalizedCorrect = currentWord.hiragana.toLowerCase().replace(/\s+/g, '');
-        const isCorrect = normalizedInput === normalizedCorrect;
-        
-        if (isCorrect) {
-            resultDisplay.textContent = "✓ Chính xác! (kiểm tra offline)";
-            resultDisplay.className = "result correct";
-            meaningDisplay.textContent = currentWord.meaning || "";
-            
-            await new Promise(resolve => setTimeout(resolve, 1000));
-            await moveToNextWord();
-        } else {
-            resultDisplay.textContent = `✗ Sai rồi! Đáp án đúng là: ${currentWord.hiragana}`;
-            resultDisplay.className = "result incorrect";
-            meaningDisplay.textContent = currentWord.meaning || "";
-            
-            if (!wrongWords.some(word => word.kanji === currentWord.kanji)) {
-                wrongWords.push(currentWord);
-            }
-            
-            answerInput.value = '';
-            interimResult = "";
-            isChecking = false;
-        }
-    } finally {
-        checkAnswerBtn.disabled = false;
-        skipWordBtn.disabled = false;
-        saveState();
+        return normalizedInput === normalizedCorrect;
     }
+}
+
+async function handleCorrectAnswer(currentWord) {
+    resultDisplay.textContent = "✓ Chính xác!";
+    resultDisplay.className = "result correct";
+    meaningDisplay.textContent = currentWord.meaning || "";
+    
+    // Hiệu ứng visual
+    kanjiDisplay.classList.add('correct-animation');
+    await new Promise(r => setTimeout(r, 800));
+    kanjiDisplay.classList.remove('correct-animation');
+    
+    // Chờ trước khi chuyển từ
+    await new Promise(resolve => setTimeout(resolve, 200));
+    await moveToNextWord();
+}
+
+async function handleIncorrectAnswer(currentWord) {
+    resultDisplay.textContent = `✗ Sai rồi! Đáp án đúng là: ${currentWord.hiragana}`;
+    resultDisplay.className = "result incorrect";
+    meaningDisplay.textContent = currentWord.meaning || "";
+    
+    // Thêm vào danh sách từ sai nếu chưa có
+    if (!wrongWords.some(word => word.kanji === currentWord.kanji)) {
+        wrongWords.push(currentWord);
+    }
+    
+    // Reset input
+    answerInput.value = '';
+    interimResult = "";
+    isChecking = false;
+    
+    // Focus lại ô nhập liệu
+    answerInput.focus();
 }
 
 // Improved move to next word function
