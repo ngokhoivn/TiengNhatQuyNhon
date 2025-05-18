@@ -566,23 +566,21 @@ async function checkAnswer() {
     
     const currentWord = vocabulary[currentIndex];
     const userAnswer = answerInput.value.trim();
-	
-	if (userAnswer === "") {
-		await handleIncorrectAnswer(currentWord);
-		return;
-	}
-
     
+    if (userAnswer === "") {
+        await handleIncorrectAnswer(currentWord);
+        isChecking = false;  // Thêm dòng này
+        enableButtons();     // Thêm dòng này
+        return;
+    }
+
     try {
-        // Hiển thị trạng thái kiểm tra
         showCheckingUI();
         
-        // Tự động phát âm nếu được bật
         if (autoSpeakEnabled) {
             speakWord(currentWord.hiragana);
         }
         
-        // Kiểm tra đáp án
         const isCorrect = await checkAnswerWithFallback(userAnswer, currentWord);
         
         if (isCorrect) {
@@ -594,12 +592,11 @@ async function checkAnswer() {
         console.error("Unexpected error in checkAnswer:", error);
         resultDisplay.textContent = "Lỗi hệ thống! Vui lòng thử lại";
         resultDisplay.className = "result error";
+        isChecking = false;  // Đảm bảo reset trạng thái khi có lỗi
     } finally {
-        // Luôn enable lại nút và lưu trạng thái
-        if (!isChecking) { // Chỉ enable nếu không chuyển từ
-            enableButtons();
-        }
-        saveState();
+        enableButtons();    // Luôn enable buttons
+        saveState();       // Luôn lưu trạng thái
+        // Không cần kiểm tra isChecking vì chúng ta muốn enable trong mọi trường hợp
     }
 }
 
