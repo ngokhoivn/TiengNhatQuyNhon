@@ -15,6 +15,7 @@ const apiKeys = [
     'AIzaSyD-LQ7BMIl85o0Tq3LogG2rBmtYjkOpogU'
 ];
 
+
 // Element references
 const tabs = document.querySelectorAll('.tab');
 const tabContents = document.querySelectorAll('.tab-content');
