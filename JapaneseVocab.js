@@ -102,27 +102,30 @@ if (skipWordBtn) {
     skipWordBtn.addEventListener('click', async () => {
         if (isChecking) return; // Prevent skipping during checking
         
-        isChecking = true;
-        skipWordBtn.disabled = true;
-        checkAnswerBtn.disabled = true;
-        
-        const currentWord = vocabulary[currentIndex];
-        resultDisplay.textContent = `Đã bỏ qua: ${currentWord.hiragana}`;
-        resultDisplay.className = "result skip";
-        resultDisplay.classList.remove("hidden");
-        meaningDisplay.textContent = currentWord.meaning || "";
-        
-        // Add the word to wrong words list for review
-        if (!wrongWords.some(word => word.kanji === currentWord.kanji)) {
-            wrongWords.push(currentWord);
+        try {
+            isChecking = true;
+            skipWordBtn.disabled = true;
+            checkAnswerBtn.disabled = true;
+            
+            const currentWord = vocabulary[currentIndex];
+            resultDisplay.textContent = `Đã bỏ qua: ${currentWord.hiragana}`;
+            resultDisplay.className = "result skip";
+            resultDisplay.classList.remove("hidden");
+            meaningDisplay.textContent = currentWord.meaning || "";
+            
+            // Add the word to wrong words list for review
+            if (!wrongWords.some(word => word.kanji === currentWord.kanji)) {
+                wrongWords.push(currentWord);
+            }
+            
+            // Wait a moment before moving to next word
+            await new Promise(resolve => setTimeout(resolve, 1000));
+            await moveToNextWord();
+        } finally {
+            isChecking = false;
+            skipWordBtn.disabled = false;
+            checkAnswerBtn.disabled = false;
         }
-        
-        // Wait a moment before moving to next word
-        await new Promise(resolve => setTimeout(resolve, 1000));
-        await moveToNextWord();
-        
-        skipWordBtn.disabled = false;
-        checkAnswerBtn.disabled = false;
     });
 }
 
@@ -767,6 +770,10 @@ async function moveToNextWord() {
         answerInput.focus();
     } catch (error) {
         console.error("Error in moveToNextWord:", error);
+		// Đảm bảo reset trạng thái ngay cả khi có lỗi
+        isChecking = false;
+        skipWordBtn.disabled = false;
+        checkAnswerBtn.disabled = false;
     }
 }
 
