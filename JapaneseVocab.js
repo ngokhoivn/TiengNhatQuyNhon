@@ -567,18 +567,16 @@ async function checkAnswer() {
     const currentWord = vocabulary[currentIndex];
     const userAnswer = answerInput.value.trim();
     
-    if (userAnswer === "") {
-        await handleIncorrectAnswer(currentWord);
-        isChecking = false;  // Thêm dòng này
-        enableButtons();     // Thêm dòng này
-        return;
-    }
-
     try {
         showCheckingUI();
         
         if (autoSpeakEnabled) {
             speakWord(currentWord.hiragana);
+        }
+        
+        if (userAnswer === "") {
+            await handleIncorrectAnswer(currentWord);
+            return;
         }
         
         const isCorrect = await checkAnswerWithFallback(userAnswer, currentWord);
@@ -592,110 +590,14 @@ async function checkAnswer() {
         console.error("Unexpected error in checkAnswer:", error);
         resultDisplay.textContent = "Lỗi hệ thống! Vui lòng thử lại";
         resultDisplay.className = "result error";
-        isChecking = false;  // Đảm bảo reset trạng thái khi có lỗi
     } finally {
-        enableButtons();    // Luôn enable buttons
-        saveState();       // Luôn lưu trạng thái
-        // Không cần kiểm tra isChecking vì chúng ta muốn enable trong mọi trường hợp
+        isChecking = false;
+        enableButtons();
+        saveState();
     }
 }
 
-// Các hàm helper mới
-function disableButtons() {
-    checkAnswerBtn.disabled = true;
-    skipWordBtn.disabled = true;
-}
-
-function enableButtons() {
-    checkAnswerBtn.disabled = false;
-    skipWordBtn.disabled = false;
-}
-
-function showCheckingUI() {
-    resultDisplay.textContent = "Đang kiểm tra...";
-    resultDisplay.className = "result checking";
-    resultDisplay.classList.remove("hidden");
-    meaningDisplay.textContent = "";
-}
-
-async function checkAnswerWithFallback(userAnswer, currentWord) {
-    try {
-        return await checkWithAI(userAnswer, currentWord.hiragana);
-    } catch (error) {
-        console.error("API check failed, using fallback:", error);
-        const normalizedInput = userAnswer.toLowerCase().replace(/\s+/g, '');
-        const normalizedCorrect = currentWord.hiragana.toLowerCase().replace(/\s+/g, '');
-        return normalizedInput === normalizedCorrect;
-    }
-}
-
-async function handleCorrectAnswer(currentWord) {
-	resultDisplay.textContent = "✓ Chính xác!";
-	resultDisplay.className = "result correct";
-	meaningDisplay.textContent = currentWord.meaning || "";
-
-	// Hiệu ứng visual
-	const kanjiText = document.getElementById('kanjiText');
-	kanjiText.classList.add('correct-animation');
-	await new Promise(r => setTimeout(r, 800));
-	kanjiText.classList.remove('correct-animation');
-
-	// Chờ trước khi chuyển từ
-	await new Promise(resolve => setTimeout(resolve, 200));
-	await moveToNextWord();
-
-}
-
-async function handleIncorrectAnswer(currentWord) {
-    resultDisplay.textContent = `✗ Sai rồi! Đáp án đúng là: ${currentWord.hiragana}`;
-    resultDisplay.className = "result incorrect";
-    meaningDisplay.textContent = currentWord.meaning || "";
-    
-    // Thêm vào danh sách từ sai nếu chưa có
-    if (!wrongWords.some(word => word.kanji === currentWord.kanji)) {
-        wrongWords.push(currentWord);
-    }
-    
-    // Reset input
-    answerInput.value = '';
-    interimResult = "";
-    isChecking = false;
-    
-    // Focus lại ô nhập liệu
-    answerInput.focus();
-}
-
-// Improved move to next word function
-async function moveToNextWord() {
-    interimResult = "";
-    currentIndex++;
-
-    if (currentIndex >= vocabulary.length) {
-        currentIndex = 0;
-        currentCycle++;
-        
-        if (currentCycle > totalCycles) {
-            await finishLearning();
-            return;
-        }
-        
-        // Reshuffle for the next cycle if shuffle is checked
-        if (shuffleCheckbox.checked) {
-            shuffleArray(vocabulary);
-        }
-    }
-
-    resultDisplay.classList.add('hidden');
-    meaningDisplay.textContent = '';
-    answerInput.value = '';
-    updateProgressUI();
-    showCurrentWord();
-    answerInput.focus();
-    
-    isChecking = false;
-}
-
-// Improved API checking function with key rotation
+// Improved API checking function with key rotation and better error handling
 async function checkWithAI(userInput, correctHiragana) {
     const cacheKey = `${userInput}:${correctHiragana}`;
 
@@ -737,14 +639,28 @@ Considering all the above rules, is the student's answer correct? Output only 't
         try {
             // Use the current API key
             const currentApiKey = apiKeys[currentApiKeyIndex];
-
+            
+            // Add timeout to prevent hanging requests
+            const controller = new AbortController();
+            const timeoutId = setTimeout(() => controller.abort(), 10000); // 10 second timeout
+            
             const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash-latest:generateContent?key=${currentApiKey}`, {
                 method: "POST",
                 headers: { "Content-Type": "application/json" },
                 body: JSON.stringify({
                     contents: [{ parts: [{ text: prompt }] }]
-                })
+                }),
+                signal: controller.signal
             });
+            
+            clearTimeout(timeoutId);
+
+            // Handle non-200 responses
+            if (!response.ok) {
+                const errorText = await response.text();
+                console.error(`API error (${response.status}): ${errorText}`);
+                throw new Error(`API error: ${response.status}`);
+            }
 
             const data = await response.json();
 
@@ -757,7 +673,7 @@ Considering all the above rules, is the student's answer correct? Output only 't
             }
 
             // Process valid response
-            if (data && data.candidates && data.candidates[0].content) {
+            if (data && data.candidates && data.candidates[0]?.content) {
                 const resultText = data.candidates[0].content.parts[0].text.trim().toLowerCase();
                 const isCorrect = resultText === "true";
                 apiCache[cacheKey] = isCorrect;
@@ -770,6 +686,11 @@ Considering all the above rules, is the student's answer correct? Output only 't
             console.error(`Error with API key ${currentApiKeyIndex + 1}:`, error);
             currentApiKeyIndex = (currentApiKeyIndex + 1) % apiKeys.length;
             attempts++;
+            
+            // If it's an abort error (timeout), log it specifically
+            if (error.name === 'AbortError') {
+                console.error("Request timed out");
+            }
         }
     }
     
@@ -779,6 +700,106 @@ Considering all the above rules, is the student's answer correct? Output only 't
     const normalizedCorrect = correctHiragana.toLowerCase().replace(/\s+/g, '');
     return normalizedInput === normalizedCorrect;
 }
+
+async function handleCorrectAnswer(currentWord) {
+    resultDisplay.textContent = "✓ Chính xác!";
+    resultDisplay.className = "result correct";
+    meaningDisplay.textContent = currentWord.meaning || "";
+
+    // Hiệu ứng visual
+    const kanjiText = document.getElementById('kanjiText');
+    if (kanjiText) {
+        kanjiText.classList.add('correct-animation');
+        await new Promise(r => setTimeout(r, 800));
+        kanjiText.classList.remove('correct-animation');
+    }
+
+    // Chờ trước khi chuyển từ
+    await new Promise(resolve => setTimeout(resolve, 200));
+    await moveToNextWord();
+}
+
+async function handleIncorrectAnswer(currentWord) {
+    resultDisplay.textContent = `✗ Sai rồi! Đáp án đúng là: ${currentWord.hiragana}`;
+    resultDisplay.className = "result incorrect";
+    resultDisplay.classList.remove("hidden");
+    meaningDisplay.textContent = currentWord.meaning || "";
+    
+    // Thêm vào danh sách từ sai nếu chưa có
+    if (!wrongWords.some(word => word.kanji === currentWord.kanji)) {
+        wrongWords.push(currentWord);
+    }
+    
+    // Reset input
+    answerInput.value = '';
+    interimResult = "";
+    
+    // Focus lại ô nhập liệu
+    answerInput.focus();
+}
+
+// Improved move to next word function with better error handling
+async function moveToNextWord() {
+    try {
+        interimResult = "";
+        currentIndex++;
+
+        if (currentIndex >= vocabulary.length) {
+            currentIndex = 0;
+            currentCycle++;
+            
+            if (currentCycle > totalCycles) {
+                await finishLearning();
+                return;
+            }
+            
+            // Reshuffle for the next cycle if shuffle is checked
+            if (shuffleCheckbox.checked) {
+                shuffleArray(vocabulary);
+            }
+        }
+
+        resultDisplay.classList.add('hidden');
+        meaningDisplay.textContent = '';
+        answerInput.value = '';
+        updateProgressUI();
+        showCurrentWord();
+        answerInput.focus();
+    } catch (error) {
+        console.error("Error in moveToNextWord:", error);
+    }
+}
+
+
+// Các hàm helper mới
+function disableButtons() {
+    checkAnswerBtn.disabled = true;
+    skipWordBtn.disabled = true;
+}
+
+function enableButtons() {
+    checkAnswerBtn.disabled = false;
+    skipWordBtn.disabled = false;
+}
+
+function showCheckingUI() {
+    resultDisplay.textContent = "Đang kiểm tra...";
+    resultDisplay.className = "result checking";
+    resultDisplay.classList.remove("hidden");
+    meaningDisplay.textContent = "";
+}
+
+async function checkAnswerWithFallback(userAnswer, currentWord) {
+    try {
+        return await checkWithAI(userAnswer, currentWord.hiragana);
+    } catch (error) {
+        console.error("API check failed, using fallback:", error);
+        const normalizedInput = userAnswer.toLowerCase().replace(/\s+/g, '');
+        const normalizedCorrect = currentWord.hiragana.toLowerCase().replace(/\s+/g, '');
+        return normalizedInput === normalizedCorrect;
+    }
+}
+
 
 // Helper functions
 function shuffleArray(array) {
