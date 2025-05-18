@@ -21,7 +21,6 @@ const tabContents = document.querySelectorAll('.tab-content');
 const vocabularyInput = document.getElementById('vocabularyInput');
 const shuffleCheckbox = document.getElementById('shuffleCheckbox');
 const cycleCountInput = document.getElementById('cycleCount');
-const startLearningBtn = document.getElementById('startLearning');
 const kanjiDisplay = document.getElementById('kanjiDisplay');
 const answerInput = document.getElementById('answerInput');
 const checkAnswerBtn = document.getElementById('checkAnswer');
@@ -38,6 +37,32 @@ const clearVocabularyBtn = document.getElementById('clearVocabulary');
 const voiceButton = document.getElementById('voiceButton');
 const outputDiv = document.getElementById('output');
 const speakCurrentWord = document.getElementById('speakCurrentWord');
+const startLearningBtn = document.getElementById('startLearning');
+if (restartLearningBtn) {
+    restartLearningBtn.addEventListener('click', () => {
+        // Reset toàn bộ trạng thái
+        vocabulary = [];
+        currentIndex = 0;
+        wrongWords = [];
+        currentCycle = 1;
+        isChecking = false;
+        
+        // Xóa dữ liệu đã lưu
+        localStorage.removeItem('vocabularyLearnerState');
+        
+        // Reset UI
+        answerInput.value = '';
+        resultDisplay.classList.add('hidden');
+        meaningDisplay.textContent = '';
+        progressText.textContent = '0/0';
+        progressBarFill.style.width = '0%';
+        cycleText.textContent = `Chu kỳ: 0/${totalCycles}`;
+        
+        // Chuyển về tab Nhập từ vựng và focus vào ô input
+        document.querySelector('[data-tab="input"]').click(); // Quan trọng: Chuyển tab!
+        vocabularyInput.focus();
+    });
+}
 
 const speakButton = document.getElementById('speakButton');
 // Thêm sự kiện click cho nút kiểm tra
