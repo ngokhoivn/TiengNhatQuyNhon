@@ -638,7 +638,7 @@ async function handleCorrectAnswer(currentWord) {
     meaningDisplay.textContent = currentWord.meaning || "";
     
     // Hiệu ứng visual
-    kanjiDisplay.classList.add('correct-animation');
+    document.getElementById('kanjiText').classList.add('correct-animation');
     await new Promise(r => setTimeout(r, 800));
     kanjiDisplay.classList.remove('correct-animation');
     
