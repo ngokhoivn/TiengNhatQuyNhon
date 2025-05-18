@@ -439,6 +439,7 @@ copyAndRelearnBtn.addEventListener('click', () => {
 async function checkAnswer() {
     if (isChecking || currentIndex >= vocabulary.length || vocabulary.length === 0) return;
     isChecking = true;
+	checkAnswerBtn.disabled = true; // Vô hiệu hóa nút
 
     const currentWord = vocabulary[currentIndex];
 	speakWord(currentWord.hiragana);
@@ -458,7 +459,7 @@ async function checkAnswer() {
             resultDisplay.className = "result correct";
             meaningDisplay.textContent = currentWord.meaning || "";
 
-            await new Promise(resolve => setTimeout(resolve, 1500)); // Có thể thay bằng biến cấu hình
+            await new Promise(resolve => setTimeout(resolve, 1000)); // Có thể thay bằng biến cấu hình
             moveToNextWord();
         } else {
             resultDisplay.textContent = `✗ Sai rồi! Đáp án đúng là: ${currentWord.hiragana}`;
@@ -486,6 +487,7 @@ async function checkAnswer() {
         }
     } finally {
         isChecking = false;
+		checkAnswerBtn.disabled = false; // Mở lại nút
         saveState();
     }
 }
