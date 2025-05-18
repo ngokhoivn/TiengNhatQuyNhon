@@ -344,23 +344,25 @@ document.addEventListener('DOMContentLoaded', function() {
 	}
 
 	async function optimizeForJapaneseSpeech(japaneseText) {
-		const prompt = `Please optimize the following Japanese text to make it sound like a natural and easy-to-understand speech:
+		const prompt = `Please rewrite the following Japanese text to make it sound like a natural, smooth, and beginner-friendly spoken presentation for non-native speakers:
 
 	"${japaneseText}"
 
 	Requirements:
-	1. Add a simple and appropriate greeting at the beginning and a closing at the end
-	2. Use basic, easy-to-understand vocabulary suitable for non-native speakers
-	3. Break the content into about 10 to 15 short and easy-to-follow sentences
-	4. Use simple connectors to make the flow of speech smooth and natural
-	5. Keep the original meaning and core message
-	6. Return only the final optimized speech text, without any explanation
+	1. Add a polite and natural greeting at the beginning and a closing remark at the end.
+	2. Use clear and simple vocabulary that is suitable for Japanese learners.
+	3. Rewrite the text into about 10–15 logically flowing sentences, avoiding overly short or choppy phrases.
+	4. Use natural-sounding conjunctions, adverbs, and onomatopoeic/repetitive expressions (such as「まず」「たとえば」「ゆっくりと」「実は」「もちろん」「少しずつ」) to make the speech feel smooth and expressive.
+	5. Keep the core meaning and structure of the original content.
+	6. Avoid unnatural literal translations; instead, adapt the phrasing so it sounds like a real spoken Japanese speech.
+	7. Return only the final optimized Japanese text, with no explanations or commentary.
 
-	The goal is to create a short, natural, and easy-to-follow spoken-style speech.`;
-
+	The goal is to create a smooth, polished, and expressive Japanese speech that feels natural for oral delivery, while remaining accessible to intermediate Japanese learners.`;
+		
 		const response = await fetchFromGemini(prompt);
 		return response.candidates[0].content.parts[0].text;
 	}
+
 
 
     async function fetchFromGemini(promptText) {
