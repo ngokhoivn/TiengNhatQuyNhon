@@ -465,17 +465,15 @@ copyAndRelearnBtn.addEventListener('click', () => {
 async function checkAnswer() {
     if (isChecking || currentIndex >= vocabulary.length || vocabulary.length === 0) return;
     isChecking = true;
-	checkAnswerBtn.disabled = true; // Vô hiệu hóa nút
+    checkAnswerBtn.disabled = true;
 
     const currentWord = vocabulary[currentIndex];
 	speakWord(currentWord.hiragana);
     const userAnswer = answerInput.value.trim();
 
-    // Hiển thị trạng thái kiểm tra
     resultDisplay.textContent = "Đang kiểm tra...";
     resultDisplay.className = "result checking";
     resultDisplay.classList.remove("hidden");
-    meaningDisplay.textContent = "";
 
     try {
         const isCorrect = await checkWithAI(userAnswer, currentWord.hiragana);
@@ -484,38 +482,49 @@ async function checkAnswer() {
             resultDisplay.textContent = "✓ Chính xác!";
             resultDisplay.className = "result correct";
             meaningDisplay.textContent = currentWord.meaning || "";
-
-            await new Promise(resolve => setTimeout(resolve, 1000)); // Có thể thay bằng biến cấu hình
-            moveToNextWord();
+            
+            await new Promise(resolve => setTimeout(resolve, 1000));
+            await moveToNextWord(); // Đợi hoàn tất
         } else {
             resultDisplay.textContent = `✗ Sai rồi! Đáp án đúng là: ${currentWord.hiragana}`;
             resultDisplay.className = "result incorrect";
             meaningDisplay.textContent = currentWord.meaning || "";
-
+            
             if (!wrongWords.some(word => word.kanji === currentWord.kanji)) {
                 wrongWords.push(currentWord);
             }
-
             answerInput.value = '';
-            interimResult = ""; // Clear voice interim result
-            answerInput.focus();
+            interimResult = "";
         }
     } catch (error) {
         console.error("Lỗi khi kiểm tra:", error);
         resultDisplay.textContent = "Lỗi kết nối. Đang kiểm tra offline...";
         resultDisplay.className = "result error";
-        
-        // Fallback: So sánh trực tiếp
-        const normalizedInput = userAnswer.toLowerCase().replace(/\s+/g, '');
-        const normalizedCorrect = currentWord.hiragana.toLowerCase().replace(/\s+/g, '');
-        if (normalizedInput === normalizedCorrect) {
-            moveToNextWord();
-        }
     } finally {
-        isChecking = false;
-		checkAnswerBtn.disabled = false; // Mở lại nút
+        checkAnswerBtn.disabled = false;
         saveState();
     }
+}
+
+async function moveToNextWord() {
+    interimResult = "";
+    currentIndex++;
+
+    if (currentIndex >= vocabulary.length) {
+        currentIndex = 0;
+        currentCycle++;
+        if (currentCycle > totalCycles) {
+            finishLearning();
+            return;
+        }
+    }
+
+    resultDisplay.classList.add('hidden');
+    meaningDisplay.textContent = '';
+    answerInput.value = '';
+    updateProgressUI();
+    showCurrentWord(); // Đã tích hợp focus() bên trong
+    isChecking = false; // Reset sau cùng
 }
 
 
@@ -618,44 +627,6 @@ function updateProgressUI() {
     cycleText.textContent = `Chu kỳ: ${currentCycle}/${totalCycles}`;
     progressBarFill.style.width = `${percentage}%`;
 }
-
-function moveToNextWord() {
-    // Reset phần nhận diện giọng nói
-    if (outputDiv) {
-        outputDiv.textContent = "";
-        outputDiv.classList.add('hidden');
-    }
-    
-    // Reset kết quả tạm thời
-    interimResult = "";
-    
-    // Chuyển sang từ tiếp theo
-    currentIndex++;
-
-    if (currentIndex >= vocabulary.length) {
-        currentIndex = 0;
-        currentCycle++;
-
-        if (currentCycle > totalCycles) {
-            finishLearning();
-            return;
-        }
-    }
-
-    // Reset UI cho từ mới
-    resultDisplay.classList.add('hidden');
-    meaningDisplay.textContent = '';
-    answerInput.value = '';
-
-    // Cập nhật UI
-    updateProgressUI();
-    showCurrentWord();
-    answerInput.focus();
-    
-    // Lưu trạng thái
-    saveState();
-}
-
 
 // Khởi tạo khi trang tải xong
 window.addEventListener('load', () => {
