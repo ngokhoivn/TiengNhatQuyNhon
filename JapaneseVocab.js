@@ -633,18 +633,20 @@ async function checkAnswerWithFallback(userAnswer, currentWord) {
 }
 
 async function handleCorrectAnswer(currentWord) {
-    resultDisplay.textContent = "✓ Chính xác!";
-    resultDisplay.className = "result correct";
-    meaningDisplay.textContent = currentWord.meaning || "";
-    
-    // Hiệu ứng visual
-    document.getElementById('kanjiText').classList.add('correct-animation');
-    await new Promise(r => setTimeout(r, 800));
-    kanjiDisplay.classList.remove('correct-animation');
-    
-    // Chờ trước khi chuyển từ
-    await new Promise(resolve => setTimeout(resolve, 200));
-    await moveToNextWord();
+	resultDisplay.textContent = "✓ Chính xác!";
+	resultDisplay.className = "result correct";
+	meaningDisplay.textContent = currentWord.meaning || "";
+
+	// Hiệu ứng visual
+	const kanjiText = document.getElementById('kanjiText');
+	kanjiText.classList.add('correct-animation');
+	await new Promise(r => setTimeout(r, 800));
+	kanjiText.classList.remove('correct-animation');
+
+	// Chờ trước khi chuyển từ
+	await new Promise(resolve => setTimeout(resolve, 200));
+	await moveToNextWord();
+
 }
 
 async function handleIncorrectAnswer(currentWord) {
