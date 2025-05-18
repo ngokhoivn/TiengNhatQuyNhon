@@ -442,7 +442,11 @@ async function checkAnswer() {
     
     // Bắt đầu quá trình kiểm tra
     isChecking = true;
-    const currentWord = vocabulary[currentIndex];
+	const currentWord = vocabulary[currentIndex];
+
+	// Phát âm từ đang kiểm tra
+	speakWord(currentWord.hiragana);
+
     const userAnswer = answerInput.value.trim();
     
     // Hiển thị trạng thái đang kiểm tra
