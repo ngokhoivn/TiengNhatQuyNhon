@@ -437,74 +437,59 @@ copyAndRelearnBtn.addEventListener('click', () => {
 
 // Check answer
 async function checkAnswer() {
-    // Kiểm tra trạng thái hiện tại
-    if (isChecking || currentIndex >= vocabulary.length) return;
-    
-    // Bắt đầu quá trình kiểm tra
+    if (isChecking || currentIndex >= vocabulary.length || vocabulary.length === 0) return;
     isChecking = true;
-	const currentWord = vocabulary[currentIndex];
 
-	// Phát âm từ đang kiểm tra
+    const currentWord = vocabulary[currentIndex];
 	speakWord(currentWord.hiragana);
-
     const userAnswer = answerInput.value.trim();
-    
-    // Hiển thị trạng thái đang kiểm tra
+
+    // Hiển thị trạng thái kiểm tra
     resultDisplay.textContent = "Đang kiểm tra...";
     resultDisplay.className = "result checking";
     resultDisplay.classList.remove("hidden");
     meaningDisplay.textContent = "";
-    
+
     try {
-        // Kiểm tra đáp án với AI
         const isCorrect = await checkWithAI(userAnswer, currentWord.hiragana);
-        
+
         if (isCorrect) {
-            // Xử lý khi đáp án đúng
             resultDisplay.textContent = "✓ Chính xác!";
             resultDisplay.className = "result correct";
-            
-            // Hiển thị nghĩa nếu có
-            if (currentWord.meaning) {
-                meaningDisplay.textContent = currentWord.meaning;
-            }
-            
-            // Chuyển sang từ tiếp sau sau 1.5 giây
-            setTimeout(() => {
-                moveToNextWord();
-                isChecking = false;
-            }, 1500);
+            meaningDisplay.textContent = currentWord.meaning || "";
+
+            await new Promise(resolve => setTimeout(resolve, 1500)); // Có thể thay bằng biến cấu hình
+            moveToNextWord();
         } else {
-            // Xử lý khi đáp án sai
             resultDisplay.textContent = `✗ Sai rồi! Đáp án đúng là: ${currentWord.hiragana}`;
             resultDisplay.className = "result incorrect";
-            
-            // Thêm vào danh sách từ sai nếu chưa có
+            meaningDisplay.textContent = currentWord.meaning || "";
+
             if (!wrongWords.some(word => word.kanji === currentWord.kanji)) {
                 wrongWords.push(currentWord);
             }
-            
-            // Hiển thị nghĩa
-            if (currentWord.meaning) {
-                meaningDisplay.textContent = currentWord.meaning;
-            }
-            
-            // Reset input để người dùng thử lại
+
             answerInput.value = '';
+            interimResult = ""; // Clear voice interim result
             answerInput.focus();
-            isChecking = false;
         }
     } catch (error) {
-        // Xử lý lỗi nếu có
-        console.error("Lỗi khi kiểm tra đáp án:", error);
-        resultDisplay.textContent = "Lỗi khi kiểm tra. Vui lòng thử lại!";
+        console.error("Lỗi khi kiểm tra:", error);
+        resultDisplay.textContent = "Lỗi kết nối. Đang kiểm tra offline...";
         resultDisplay.className = "result error";
-        isChecking = false;
+        
+        // Fallback: So sánh trực tiếp
+        const normalizedInput = userAnswer.toLowerCase().replace(/\s+/g, '');
+        const normalizedCorrect = currentWord.hiragana.toLowerCase().replace(/\s+/g, '');
+        if (normalizedInput === normalizedCorrect) {
+            moveToNextWord();
+        }
     } finally {
-        // Luôn lưu trạng thái dù kết quả thế nào
+        isChecking = false;
         saveState();
     }
 }
+
 
 // Improved AI checking function with better handling of alternative inputs
 async function checkWithAI(userInput, correctHiragana) {
