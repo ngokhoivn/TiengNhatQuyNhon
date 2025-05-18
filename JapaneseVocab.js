@@ -100,7 +100,7 @@ if (checkAnswerBtn) {
 // Add skip word event listener - This was missing
 if (skipWordBtn) {
     skipWordBtn.addEventListener('click', async () => {
-        if (isChecking) return; // Prevent skipping during checking
+        if (isChecking) return;
         
         try {
             isChecking = true;
@@ -113,18 +113,24 @@ if (skipWordBtn) {
             resultDisplay.classList.remove("hidden");
             meaningDisplay.textContent = currentWord.meaning || "";
             
-            // Add the word to wrong words list for review
             if (!wrongWords.some(word => word.kanji === currentWord.kanji)) {
                 wrongWords.push(currentWord);
             }
             
-            // Wait a moment before moving to next word
             await new Promise(resolve => setTimeout(resolve, 1000));
             await moveToNextWord();
+        } catch (error) {
+            console.error("Error during skip:", error);
         } finally {
+            // ĐẢM BẢO LUÔN RESET LẠI TRẠNG THÁI
             isChecking = false;
             skipWordBtn.disabled = false;
             checkAnswerBtn.disabled = false;
+            
+            // Thêm delay nhỏ để đảm bảo UI cập nhật
+            setTimeout(() => {
+                checkAnswerBtn.disabled = false;
+            }, 50);
         }
     });
 }
@@ -770,10 +776,6 @@ async function moveToNextWord() {
         answerInput.focus();
     } catch (error) {
         console.error("Error in moveToNextWord:", error);
-		// Đảm bảo reset trạng thái ngay cả khi có lỗi
-        isChecking = false;
-        skipWordBtn.disabled = false;
-        checkAnswerBtn.disabled = false;
     }
 }
 
