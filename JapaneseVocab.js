@@ -566,6 +566,12 @@ async function checkAnswer() {
     
     const currentWord = vocabulary[currentIndex];
     const userAnswer = answerInput.value.trim();
+	
+	if (userAnswer === "") {
+		await handleIncorrectAnswer(currentWord);
+		return;
+	}
+
     
     try {
         // Hiển thị trạng thái kiểm tra
