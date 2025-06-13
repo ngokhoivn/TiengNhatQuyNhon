@@ -724,6 +724,61 @@
                 0 8px 32px rgba(0, 0, 0, 0.3),
                 inset 0 1px 0 rgba(255, 255, 255, 0.1);
         }
+		
+		.sentence-example {
+			display: flex;
+			align-items: center;
+			justify-content: space-between;
+			position: relative;
+		}
+
+		.nav-arrow {
+			background: var(--glass-bg);
+			border: 2px solid var(--primary);
+			color: var(--primary);
+			font-size: 1.2em;
+			border-radius: 50%;
+			width: 48px;
+			height: 48px;
+			display: flex;
+			align-items: center;
+			justify-content: center;
+			cursor: pointer;
+			box-shadow: 0 4px 16px rgba(99, 102, 241, 0.25);
+			transition: all 0.3s ease;
+		}
+
+		.nav-arrow:hover {
+			background: var(--primary);
+			color: white;
+			transform: scale(1.1);
+		}
+
+
+		.nav-arrow:active {
+			transform: scale(0.95);
+			box-shadow: inset 0 2px 6px rgba(0, 0, 0, 0.3);
+		}
+
+
+		.nav-arrow {
+			color: var(--primary-light); /* hoặc var(--text-light), hoặc cùng màu chủ đạo */
+		}
+
+
+		.nav-arrow:hover {
+			opacity: 1;
+			transform: scale(1.2);
+		}
+
+		.nav-arrow:active {
+			transform: scale(0.9);
+		}
+
+		.vietnamese-text {
+			flex: 1;
+			text-align: center;
+		}
     </style>
 </head>
 <body>
@@ -758,9 +813,11 @@
             </div>
         </div>
         
-        <div class="sentence-example">
-            <div class="vietnamese-text" id="translation">Thầy giáo đang nói chuyện với học sinh.</div>
-        </div>
+		<div class="sentence-example">
+			<span class="nav-arrow prev-arrow"><i class="fas fa-chevron-left"></i></span>
+			<div class="vietnamese-text" id="translation">Thầy giáo đang nói chuyện với học sinh.</div>
+			<span class="nav-arrow next-arrow"><i class="fas fa-chevron-right"></i></span>
+		</div>
         
         <div class="word-bank">
             <div class="words-container" id="word-bank">
@@ -783,16 +840,16 @@
             </div>
         </div>
         
-        <div class="controls">
-            <button class="btn btn-check" id="check-btn">
-                <i class="fas fa-check"></i>
-                Kiểm tra
-            </button>
-            <button class="btn btn-clear" id="clear-btn">
-                <i class="fas fa-trash"></i>
-                Xóa hết
-            </button>
-        </div>
+		<div class="controls">
+			<button class="btn btn-check" id="check-btn">
+				<i class="fas fa-check"></i>
+				Kiểm tra
+			</button>
+			<button class="btn btn-clear" id="clear-btn">
+				<i class="fas fa-trash"></i>
+				Xóa hết
+			</button>
+		</div>
         
         <div class="result" id="result"></div>
         
