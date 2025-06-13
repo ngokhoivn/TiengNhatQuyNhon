@@ -1,0 +1,601 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Japanese Text Cleaner & Converter</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+    <style>
+        :root {
+            --bg-dark: #0a0a0a;
+            --bg-card: #1a1a1a;
+            --bg-card-light: #242424;
+            --text-light: #ffffff;
+            --text-muted: #b3b3b3;
+            --primary: #8b5cf6;
+            --primary-dark: #7c3aed;
+            --primary-light: #a78bfa;
+            --accent: #ec4899;
+            --accent-dark: #db2777;
+            --error: #ef4444;
+            --success: #10b981;
+            --warning: #f59e0b;
+            --border: #374151;
+            --glow: rgba(139, 92, 246, 0.3);
+            --glass-bg: rgba(255, 255, 255, 0.05);
+            --glass-border: rgba(255, 255, 255, 0.1);
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: 'Inter', 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #0f172a 0%, #1e293b 50%, #334155 100%);
+            color: var(--text-light);
+            min-height: 100vh;
+            padding: 20px;
+            position: relative;
+            overflow-x: hidden;
+        }
+
+        /* Animated background particles */
+        body::before {
+            content: '';
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background-image: 
+                radial-gradient(circle at 20% 30%, var(--primary) 0%, transparent 50%),
+                radial-gradient(circle at 80% 70%, var(--accent) 0%, transparent 50%),
+                radial-gradient(circle at 40% 80%, var(--primary-light) 0%, transparent 50%);
+            opacity: 0.05;
+            z-index: -1;
+            animation: float 20s ease-in-out infinite;
+        }
+
+        @keyframes float {
+            0%, 100% { transform: translate(0, 0) rotate(0deg); }
+            33% { transform: translate(30px, -30px) rotate(120deg); }
+            66% { transform: translate(-20px, 20px) rotate(240deg); }
+        }
+        
+        .container {
+            max-width: 900px;
+            margin: 0 auto;
+            background: var(--glass-bg);
+            backdrop-filter: blur(20px);
+            border-radius: 24px;
+            padding: 40px;
+            border: 1px solid var(--glass-border);
+            box-shadow: 
+                0 25px 60px rgba(0, 0, 0, 0.4),
+                inset 0 1px 0 rgba(255, 255, 255, 0.1);
+            position: relative;
+        }
+
+        .container::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            height: 2px;
+            background: linear-gradient(90deg, var(--primary), var(--accent), var(--primary));
+            border-radius: 24px 24px 0 0;
+        }
+
+        .home-button-container {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            margin-bottom: 30px;
+        }
+
+        .btn-home {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 12px 24px;
+            border-radius: 16px;
+            background: linear-gradient(135deg, var(--primary-dark), var(--primary));
+            color: white;
+            text-decoration: none;
+            font-weight: 600;
+            gap: 10px;
+            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+            border: none;
+            cursor: pointer;
+            box-shadow: 0 4px 20px var(--glow);
+        }
+
+        .btn-home:hover {
+            transform: translateY(-2px) scale(1.02);
+            box-shadow: 0 8px 30px var(--glow);
+        }
+        
+        h1 {
+            background: linear-gradient(135deg, var(--primary), var(--accent));
+            background-clip: text;
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            text-align: center;
+            margin-bottom: 32px;
+            font-weight: 800;
+            font-size: 2.5rem;
+            letter-spacing: -1px;
+            position: relative;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 15px;
+        }
+
+        h1::after {
+            content: '';
+            position: absolute;
+            bottom: -8px;
+            left: 50%;
+            transform: translateX(-50%);
+            width: 60px;
+            height: 4px;
+            background: linear-gradient(90deg, var(--primary), var(--accent));
+            border-radius: 2px;
+        }
+
+        textarea {
+            width: 100%;
+            height: 180px;
+            padding: 16px;
+            background: var(--bg-dark);
+            border: 1px solid var(--border);
+            border-radius: 12px;
+            color: var(--text-light);
+            font-size: 14px;
+            resize: vertical;
+            margin-bottom: 24px;
+            font-family: 'Segoe UI', monospace;
+            transition: all 0.3s ease;
+        }
+
+        textarea:focus {
+            outline: none;
+            border-color: var(--primary);
+            box-shadow: 0 0 0 2px var(--glow);
+        }
+
+        textarea::placeholder {
+            color: var(--text-muted);
+        }
+
+        .tab-container {
+            margin-bottom: 24px;
+        }
+
+        .tab-buttons {
+            display: flex;
+            gap: 4px;
+            background: var(--bg-dark);
+            padding: 4px;
+            border-radius: 12px;
+            border: 1px solid var(--border);
+        }
+
+        .tab-button {
+            flex: 1;
+            padding: 12px 24px;
+            background: transparent;
+            color: var(--text-muted);
+            border: none;
+            border-radius: 8px;
+            cursor: pointer;
+            font-size: 14px;
+            font-weight: 500;
+            transition: all 0.3s ease;
+        }
+
+        .tab-button.active {
+            background: linear-gradient(135deg, var(--primary), var(--primary-dark));
+            color: var(--text-light);
+            box-shadow: 0 2px 8px var(--glow);
+        }
+
+        .tab-button:hover:not(.active) {
+            background: rgba(139, 92, 246, 0.2);
+            color: var(--text-light);
+        }
+
+        .tab-content {
+            background: var(--bg-card);
+            border-radius: 12px;
+            padding: 24px;
+            border: 1px solid var(--border);
+            backdrop-filter: blur(10px);
+        }
+
+        .hidden {
+            display: none;
+        }
+
+        .action-btn {
+            background: linear-gradient(135deg, var(--primary), var(--primary-dark));
+            color: white;
+            border: none;
+            padding: 14px 28px;
+            border-radius: 8px;
+            cursor: pointer;
+            font-size: 15px;
+            font-weight: 500;
+            transition: all 0.3s ease;
+            box-shadow: 0 4px 16px var(--glow);
+        }
+
+        .action-btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 6px 20px rgba(139, 92, 246, 0.5);
+        }
+
+        .action-btn:active {
+            transform: translateY(0);
+        }
+
+        .secondary-btn {
+            background: var(--bg-card-light);
+            color: var(--text-light);
+            border: 1px solid var(--border);
+            padding: 12px 24px;
+            border-radius: 8px;
+            cursor: pointer;
+            font-size: 14px;
+            margin-top: 16px;
+            transition: all 0.3s ease;
+        }
+
+        .secondary-btn:hover {
+            background: rgba(139, 92, 246, 0.2);
+            border-color: var(--primary);
+        }
+
+        .copy-btn {
+            background: linear-gradient(135deg, var(--accent), var(--accent-dark));
+            box-shadow: 0 4px 16px rgba(236, 72, 153, 0.3);
+        }
+
+        .copy-btn:hover {
+            box-shadow: 0 6px 20px rgba(236, 72, 153, 0.4);
+        }
+
+        .result-area {
+            margin-top: 24px;
+        }
+
+        .result-area h3 {
+            color: var(--text-muted);
+            margin-bottom: 16px;
+            font-weight: 400;
+            font-size: 1.1rem;
+        }
+
+        .result-box {
+            background: var(--bg-dark);
+            border: 1px solid var(--border);
+            border-radius: 8px;
+            padding: 20px;
+            white-space: pre-wrap;
+            font-family: 'Segoe UI', monospace;
+            font-size: 14px;
+            line-height: 1.6;
+            color: var(--text-light);
+            min-height: 60px;
+            max-height: 400px;
+            overflow-y: auto;
+        }
+
+        .result-box:empty::before {
+            content: "Results will appear here...";
+            color: var(--text-muted);
+            font-style: italic;
+        }
+
+        .loading {
+            display: none;
+            text-align: center;
+            margin: 24px 0;
+        }
+
+        .spinner {
+            width: 32px;
+            height: 32px;
+            border: 3px solid var(--border);
+            border-top: 3px solid var(--primary);
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+            margin: 0 auto 12px;
+        }
+
+        .loading p {
+            color: var(--text-muted);
+            font-size: 14px;
+        }
+
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+
+        /* Scrollbar styling */
+        ::-webkit-scrollbar {
+            width: 8px;
+        }
+
+        ::-webkit-scrollbar-track {
+            background: var(--bg-card);
+            border-radius: 4px;
+        }
+
+        ::-webkit-scrollbar-thumb {
+            background: var(--primary);
+            border-radius: 4px;
+        }
+
+        ::-webkit-scrollbar-thumb:hover {
+            background: var(--primary-light);
+        }
+
+        footer {
+            text-align: center;
+            padding: 32px 20px;
+            color: var(--text-muted);
+            font-size: 14px;
+            margin-top: 40px;
+            border-top: 1px solid var(--glass-border);
+            background: var(--glass-bg);
+            border-radius: 20px;
+            backdrop-filter: blur(10px);
+        }
+
+        footer a {
+            color: var(--accent);
+            text-decoration: none;
+            transition: color 0.3s ease;
+        }
+
+        footer a:hover {
+            color: var(--primary);
+            text-decoration: underline;
+        }
+
+        /* Responsive design */
+        @media (max-width: 768px) {
+            .container {
+                padding: 24px 20px;
+                margin: 10px;
+            }
+            
+            h1 {
+                font-size: 1.8rem;
+                margin-bottom: 24px;
+            }
+            
+            .tab-content {
+                padding: 20px;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="home-button-container">
+            <a href="index.html" class="btn-home">
+                <i class="fas fa-home"></i>
+                Trang chủ
+            </a>
+        </div>
+
+        <h1><i class="fas fa-language"></i> Japanese Text Cleaner & Converter</h1>
+        
+        <textarea id="inputText" placeholder="みんなさん、こんにちは。
+今日は　日本語　を勉強すること　について　話したいと思います。..."></textarea>
+        
+        <div class="tab-container">
+            <div class="tab-buttons">
+                <button class="tab-button active" data-tab="clean">Clean Text</button>
+                <button class="tab-button" data-tab="convert">Convert Format</button>
+            </div>
+        </div>
+        
+        <div id="clean-tab" class="tab-content">
+            <button id="cleanBtn" class="action-btn">Clean Japanese Text</button>
+            <div class="result-area">
+                <h3>Cleaned Text:</h3>
+                <div class="result-box" id="cleanResult"></div>
+                <button id="useCleanedBtn" class="secondary-btn hidden">Use This for Conversion</button>
+            </div>
+        </div>
+        
+        <div id="convert-tab" class="tab-content hidden">
+            <button id="convertBtn" class="action-btn">Convert to Special Format</button>
+            
+            <div class="loading" id="loading">
+                <div class="spinner"></div>
+                <p>Processing...</p>
+            </div>
+            
+            <div class="result-area">
+                <h3>Conversion Result:</h3>
+                <div class="result-box" id="convertResult"></div>
+                <button id="copyBtn" class="action-btn copy-btn hidden">Copy for Google Sheets</button>
+            </div>
+        </div>
+
+        <footer>
+            <p>© 2025 - Tiếng Nhật Online & Offline Quy Nhơn</p>
+            <p>Địa chỉ: 22 Tô Hiến Thành, TP Quy Nhơn</p>
+            <p>Zalo: <a href="https://zalo.me/0762756679" target="_blank">0762.75.66.79</a></p>
+        </footer>
+    </div>
+
+    <script>
+        const API_KEY = "AIzaSyDjgTk4uZQUCpFH5Zt8ZgP2CW-jhmkLv8o";
+        const MODEL_NAME = "gemini-1.5-flash-latest";
+        const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/${MODEL_NAME}:generateContent?key=${API_KEY}`;
+
+        // Tab switching
+        document.querySelectorAll('.tab-button').forEach(button => {
+            button.addEventListener('click', () => {
+                document.querySelectorAll('.tab-button').forEach(btn => btn.classList.remove('active'));
+                button.classList.add('active');
+                
+                document.querySelectorAll('[id$="-tab"]').forEach(tab => tab.classList.add('hidden'));
+                document.getElementById(`${button.dataset.tab}-tab`).classList.remove('hidden');
+            });
+        });
+
+        // Text cleaning function
+        function cleanJapaneseText(text) {
+            // 1. Remove extra spaces between Japanese characters
+            let cleaned = text.replace(/([^\w\s]|[\u3040-\u309F\u30A0-\u30FF\u4E00-\u9FAF])\s+([^\w\s]|[\u3040-\u309F\u30A0-\u30FF\u4E00-\u9FAF])/g, '$1$2');
+            
+            // 2. Normalize spaces around punctuation
+            cleaned = cleaned.replace(/\s*([、。！？])\s*/g, '$1');
+            
+            // 3. Remove spaces before particles
+            cleaned = cleaned.replace(/\s+([はがでのにをへとからまでより])\s*/g, '$1');
+            
+            // 4. Remove duplicate newlines and trim
+            cleaned = cleaned.replace(/\n+/g, '\n').trim();
+            
+            // 5. Special case for こと、ところ、もの etc.
+            cleaned = cleaned.replace(/(\S)\s+(こと|ところ|もの|ため|とき|わけ|はず|つもり|とおり)\s*/g, '$1$2');
+            
+            return cleaned;
+        }
+
+        // Clean text button
+        document.getElementById('cleanBtn').addEventListener('click', function() {
+            const inputText = document.getElementById('inputText').value.trim();
+            const cleanResult = document.getElementById('cleanResult');
+            const useCleanedBtn = document.getElementById('useCleanedBtn');
+            
+            if (!inputText) {
+                cleanResult.textContent = "Please enter Japanese text to clean.";
+                return;
+            }
+            
+            const cleanedText = cleanJapaneseText(inputText);
+            cleanResult.textContent = cleanedText;
+            useCleanedBtn.classList.remove('hidden');
+            
+            // Store cleaned text in button for later use
+            useCleanedBtn.dataset.cleanedText = cleanedText;
+        });
+
+        // Use cleaned text for conversion
+        document.getElementById('useCleanedBtn').addEventListener('click', function() {
+            document.getElementById('inputText').value = this.dataset.cleanedText;
+            document.querySelector('[data-tab="convert"]').click();
+        });
+
+        // Convert button
+        document.getElementById('convertBtn').addEventListener('click', async function() {
+            const inputText = document.getElementById('inputText').value.trim();
+            const convertResult = document.getElementById('convertResult');
+            const loadingDiv = document.getElementById('loading');
+            const copyBtn = document.getElementById('copyBtn');
+            
+            if (!inputText) {
+                convertResult.textContent = "Please enter Japanese text to convert.";
+                return;
+            }
+            
+            // Show loading spinner
+            loadingDiv.style.display = 'block';
+            convertResult.textContent = '';
+            copyBtn.classList.add('hidden');
+            
+            try {
+                // First clean the text (in case user didn't use the clean tab)
+                const cleanedText = cleanJapaneseText(inputText);
+                
+                const prompt = `Convert this Japanese text into the following format:
+                
+Original: 先生が学生に話しています。
+Converted: 先生が学生に話しています。/先生,が,学生,に,話し,て,い,ます,。/Giáo viên đang nói chuyện với học sinh.
+
+Original: 日本語を勉強することは難しいですが、面白いです。
+Converted: 日本語を勉強することは難しいですが、面白いです。/日本語,を,勉強,する,こと,は,難しい,です,が,、,面白い,です,。/Việc học tiếng Nhật tuy khó nhưng thú vị.
+
+Now convert this (already cleaned) text:
+${cleanedText}
+
+Provide the output in the exact same format, with each original sentence followed by its analysis and translation.`;
+                
+                const response = await fetch(apiUrl, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({
+                        contents: [{ parts: [{ text: prompt }] }],
+                        generationConfig: {
+                            maxOutputTokens: 2000
+                        }
+                    })
+                });
+                
+                const data = await response.json();
+                
+                if (data.candidates && data.candidates[0].content.parts[0].text) {
+                    const resultText = data.candidates[0].content.parts[0].text;
+                    convertResult.textContent = resultText;
+                    copyBtn.classList.remove('hidden');
+                    // Store the raw result for copying
+                    copyBtn.dataset.resultText = resultText;
+                } else {
+                    convertResult.textContent = "Error: Could not process the text. Please try again.";
+                    if (data.error) {
+                        console.error("API Error:", data.error);
+                    }
+                }
+            } catch (error) {
+                console.error('Error:', error);
+                convertResult.textContent = "An error occurred. Please try again later.";
+            } finally {
+                // Hide loading spinner
+                loadingDiv.style.display = 'none';
+            }
+        });
+
+        // Copy button for Google Sheets
+        document.getElementById('copyBtn').addEventListener('click', function() {
+            const resultText = this.dataset.resultText;
+            
+            // Process the text for Google Sheets:
+            // 1. Split into lines
+            const lines = resultText.split('\n');
+            // 2. Filter out empty lines
+            const nonEmptyLines = lines.filter(line => line.trim() !== '');
+            // 3. Join with newlines for copying
+            const textForSheets = nonEmptyLines.join('\n');
+            
+            // Copy to clipboard
+            navigator.clipboard.writeText(textForSheets).then(() => {
+                // Show feedback
+                const originalText = this.textContent;
+                this.textContent = 'Copied!';
+                setTimeout(() => {
+                    this.textContent = originalText;
+                }, 2000);
+            }).catch(err => {
+                console.error('Failed to copy text: ', err);
+                alert('Failed to copy text. Please try again.');
+            });
+        });
+    </script>
+</body>
+</html>
