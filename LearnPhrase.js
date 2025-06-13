@@ -89,6 +89,12 @@ function init() {
     setupEventListeners();
 }
 
+function updateProgressBar() {
+    const progressFill = document.getElementById('progress-fill');
+    const progressPercentage = ((currentSentenceIndex + 1) / sentences.length) * 100;
+    progressFill.style.width = `${progressPercentage}%`;
+}
+
 // Event listeners setup
 function setupEventListeners() {
     elements.checkBtn.addEventListener('click', checkSentence);
@@ -110,8 +116,11 @@ function nextSentence() {
         currentSentenceIndex++;
         loadSentence();
     } else {
+        updateProgressBar();
         showFinalScore();
+        return; // Thêm dòng này để không thực hiện các lệnh tiếp theo
     }
+    updateProgressBar(); // Di chuyển ra khỏi else
 }
 
 // Load current sentence
@@ -134,6 +143,7 @@ function loadSentence() {
     
     // Show check button
     elements.checkBtn.style.display = 'inline-flex';
+	updateProgressBar();
 }
 
 function loadWordBank(words) {
@@ -256,6 +266,7 @@ function restartGame() {
     score = 0;
     streak = 0;
     updateScoreBoard();
+	updateProgressBar();
     loadSentence();
     elements.checkBtn.style.display = 'inline-flex';
     elements.clearBtn.style.display = 'inline-flex';
@@ -323,6 +334,7 @@ function parseSheetInput() {
     currentSentenceIndex = 0;
     score = 0;
     streak = 0;
+	updateProgressBar();
     updateScoreBoard();
     loadSentence();
     
