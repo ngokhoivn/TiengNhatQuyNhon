@@ -84,6 +84,9 @@ function init() {
         };
     }
     
+    // Reset progress bar to 0% initially
+    document.getElementById('progress-fill').style.width = '0%';
+    
     loadSentence();
     updateScoreBoard();
     setupEventListeners();
@@ -92,7 +95,11 @@ function init() {
 function updateProgressBar() {
     const progressFill = document.getElementById('progress-fill');
     const progressPercentage = ((currentSentenceIndex + 1) / sentences.length) * 100;
-    progressFill.style.width = `${progressPercentage}%`;
+    
+    // Chỉ cập nhật nếu có thay đổi
+    if (progressFill.style.width !== `${progressPercentage}%`) {
+        progressFill.style.width = `${progressPercentage}%`;
+    }
 }
 
 // Event listeners setup
