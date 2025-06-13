@@ -26,6 +26,8 @@ const sentences = [
     }
 ];
 
+const synth = window.speechSynthesis;
+
 // Game state
 let currentSentenceIndex = 0;
 let score = 0;
@@ -49,8 +51,39 @@ const elements = {
     nextArrow: document.querySelector('.next-arrow')
 };
 
+// Hàm phát âm từ
+function speakWord(word, lang = 'ja-JP') {
+    if (!synth) {
+        console.warn('Trình duyệt không hỗ trợ Text-to-Speech');
+        return;
+    }
+
+    // Dừng bất kỳ phát âm nào đang diễn ra
+    synth.cancel();
+
+    const utterance = new SpeechSynthesisUtterance(word);
+    utterance.lang = lang;
+    utterance.rate = 0.9; // Tốc độ chậm hơn một chút
+
+    // Thử chọn giọng nói tiếng Nhật nếu có
+    const voices = synth.getVoices();
+    const japaneseVoice = voices.find(voice => voice.lang.includes('ja'));
+    if (japaneseVoice) {
+        utterance.voice = japaneseVoice;
+    }
+
+    synth.speak(utterance);
+}
+
 // Initialize game
 function init() {
+    // Load voices khi có sẵn
+    if (synth) {
+        synth.onvoiceschanged = () => {
+            console.log('Voices loaded');
+        };
+    }
+    
     loadSentence();
     updateScoreBoard();
     setupEventListeners();
@@ -134,7 +167,11 @@ function toggleWord(element, word) {
     } else {
         removeWordFromSentence(word);
     }
+    
+    // Phát âm từ khi nhấn
+    speakWord(word);
 }
+
 
 function addWordToSentence(word) {
     placedWords.push(word);
@@ -146,6 +183,7 @@ function addWordToSentence(word) {
         const wordEl = [...elements.wordBank.querySelectorAll('.word')].find(el => el.textContent === word);
         if (wordEl) wordEl.classList.remove('selected');
         removeWordFromSentence(word);
+        speakWord(word); // Phát âm khi click để xóa từ
     });
     
     elements.sentenceArea.appendChild(placedWordEl);
