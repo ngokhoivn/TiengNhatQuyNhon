@@ -84,9 +84,6 @@ function init() {
         };
     }
     
-    // Reset progress bar to 0% initially
-    document.getElementById('progress-fill').style.width = '0%';
-    
     loadSentence();
     updateScoreBoard();
     setupEventListeners();
@@ -95,9 +92,12 @@ function init() {
 function updateProgressBar() {
     const progressFill = document.getElementById('progress-fill');
     const progressPercentage = ((currentSentenceIndex + 1) / sentences.length) * 100;
-    
-    // Chỉ cập nhật nếu có thay đổi
-    if (progressFill.style.width !== `${progressPercentage}%`) {
+
+    if (progressPercentage === 0) {
+        progressFill.style.opacity = '0';
+        progressFill.style.width = '0%';
+    } else {
+        progressFill.style.opacity = '1';
         progressFill.style.width = `${progressPercentage}%`;
     }
 }
@@ -123,11 +123,9 @@ function nextSentence() {
         currentSentenceIndex++;
         loadSentence();
     } else {
-        updateProgressBar();
+        updateProgressBar(); // Đảm bảo cập nhật tiến trình trước khi hiển thị điểm cuối
         showFinalScore();
-        return; // Thêm dòng này để không thực hiện các lệnh tiếp theo
     }
-    updateProgressBar(); // Di chuyển ra khỏi else
 }
 
 // Load current sentence
@@ -150,6 +148,7 @@ function loadSentence() {
     
     // Show check button
     elements.checkBtn.style.display = 'inline-flex';
+	updateProgressBar();
 	updateProgressBar();
 }
 
@@ -231,15 +230,21 @@ function checkSentence() {
 function handleCorrectAnswer() {
     score += 100 + (streak * 10);
     streak++;
-    
+
     elements.result.className = 'result show correct';
     elements.result.innerHTML = `<i class="fas fa-check-circle"></i> Chính xác! +${100 + ((streak - 1) * 10)} điểm`;
-    
+
     createConfetti();
     elements.checkBtn.style.display = 'none';
-    
+
     setTimeout(() => {
-        nextSentence();
+        if (currentSentenceIndex < sentences.length - 1) {
+            currentSentenceIndex++;
+            loadSentence();
+        } else {
+            updateProgressBar(); // Đảm bảo cập nhật tiến trình khi hoàn thành
+            showFinalScore();
+        }
     }, 2000);
 }
 
