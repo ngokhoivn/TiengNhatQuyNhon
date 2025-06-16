@@ -1,0 +1,748 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Đăng ký khóa học làm game Unreal Engine RPG Multiplayer</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <style>
+        :root {
+            --primary: #4c6ef5;
+            --secondary: #845ec2;
+            --light: #f8f9ff;
+            --dark: #2c3e50;
+            --accent: #74c0fc;
+            --success: #2b9348;
+            --warning: #f59f00;
+            --error: #e03131;
+            --game-gradient: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            --game-gradient-alt: linear-gradient(145deg, #4c6ef5, #845ec2);
+            --unreal-gradient: linear-gradient(135deg, #0E1C36 0%, #3A6073 100%);
+        }
+        
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: 'Segoe UI', 'Helvetica Neue', Arial, sans-serif;
+            line-height: 1.6;
+            background-color: #f8f9ff;
+            color: var(--dark);
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+            overflow-x: hidden;
+        }
+        
+        .container {
+            max-width: 1000px;
+            margin: 0 auto;
+            padding: 20px;
+        }
+        
+        .header {
+            width: 100%;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            padding: 40px 0;
+            background: var(--unreal-gradient);
+            box-shadow: 0 4px 20px rgba(0, 0, 0, 0.2);
+            position: relative;
+            overflow: hidden;
+            color: white;
+        }
+
+        .header::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background-image: url("data:image/svg+xml,%3Csvg width='100' height='100' viewBox='0 0 100 100' xmlns='http://www.w3.org/2000/svg'%3E%3Cpath d='M11 18c3.866 0 7-3.134 7-7s-3.134-7-7-7-7 3.134-7 7 3.134 7 7 7zm48 25c3.866 0 7-3.134 7-7s-3.134-7-7-7-7 3.134-7 7 3.134 7 7 7zm-43-7c1.657 0 3-1.343 3-3s-1.343-3-3-3-3 1.343-3 3 1.343 3 3 3zm63 31c1.657 0 3-1.343 3-3s-1.343-3-3-3-3 1.343-3 3 1.343 3 3 3zM34 90c1.657 0 3-1.343 3-3s-1.343-3-3-3-3 1.343-3 3 1.343 3 3 3zm56-76c1.657 0 3-1.343 3-3s-1.343-3-3-3-3 1.343-3 3 1.343 3 3 3zM12 86c2.21 0 4-1.79 4-4s-1.79-4-4-4-4 1.79-4 4 1.79 4 4 4zm28-65c2.21 0 4-1.79 4-4s-1.79-4-4-4-4 1.79-4 4 1.79 4 4 4zm23-11c2.76 0 5-2.24 5-5s-2.24-5-5-5-5 2.24-5 5 2.24 5 5 5zm-6 60c2.21 0 4-1.79 4-4s-1.79-4-4-4-4 1.79-4 4 1.79 4 4 4zm29 22c2.76 0 5-2.24 5-5s-2.24-5-5-5-5 2.24-5 5 2.24 5 5 5zM32 63c2.76 0 5-2.24 5-5s-2.24-5-5-5-5 2.24-5 5 2.24 5 5 5zm57-13c2.76 0 5-2.24 5-5s-2.24-5-5-5-5 2.24-5 5 2.24 5 5 5zm-9-21c1.105 0 2-.895 2-2s-.895-2-2-2-2 .895-2 2 .895 2 2 2zM60 91c1.105 0 2-.895 2-2s-.895-2-2-2-2 .895-2 2 .895 2 2 2zM35 41c1.105 0 2-.895 2-2s-.895-2-2-2-2 .895-2 2 .895 2 2 2zM12 60c1.105 0 2-.895 2-2s-.895-2-2-2-2 .895-2 2 .895 2 2 2z' fill='%230E1C36' fill-opacity='0.15' fill-rule='evenodd'/%3E%3C/svg%3E");
+            opacity: 0.6;
+            z-index: 0;
+        }
+
+        .logo-container {
+            position: relative;
+            z-index: 1;
+            display: flex;
+            justify-content: center;
+            width: 100%;
+        }
+
+        .logo {
+            width: 150px;
+            height: 150px;
+            border-radius: 50%;
+            background: var(--unreal-gradient);
+            border: 4px solid white;
+            box-shadow: 0 6px 16px rgba(0, 0, 0, 0.3);
+            margin-bottom: 20px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            overflow: hidden;
+            transition: transform 0.3s ease;
+        }
+
+        .logo:hover {
+            transform: scale(1.05);
+        }
+
+        .logo i {
+            font-size: 4rem;
+            color: white;
+            text-shadow: 0 2px 4px rgba(0, 0, 0, 0.3);
+        }
+
+        .fanpage-name {
+            font-size: 2.5rem;
+            font-weight: 700;
+            color: white;
+            text-align: center;
+            margin-bottom: 15px;
+            text-shadow: 0 2px 4px rgba(0, 0, 0, 0.3);
+            position: relative;
+            z-index: 1;
+        }
+
+        .fanpage-description {
+            font-size: 1.1rem;
+            color: rgba(255, 255, 255, 0.9);
+            text-align: center;
+            max-width: 80%;
+            margin-bottom: 25px;
+            line-height: 1.6;
+            position: relative;
+            z-index: 1;
+        }
+        
+        .main-content {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 30px;
+            margin-bottom: 30px;
+        }
+        
+        .form-container {
+            flex: 1 1 600px;
+            background-color: white;
+            border-radius: 10px;
+            box-shadow: 0 5px 15px rgba(0,0,0,0.05);
+            padding: 30px;
+            transition: transform 0.3s ease;
+        }
+        
+        .form-container:hover {
+            transform: translateY(-5px);
+        }
+        
+        .info-container {
+            flex: 1 1 300px;
+        }
+        
+        .card {
+            background-color: white;
+            border-radius: 10px;
+            box-shadow: 0 5px 15px rgba(0,0,0,0.05);
+            padding: 25px;
+            margin-bottom: 20px;
+            transition: transform 0.3s ease;
+        }
+        
+        .card:hover {
+            transform: translateY(-5px);
+        }
+        
+        .price-card {
+            border-left: 4px solid var(--success);
+            background: linear-gradient(135deg, #f8fff9 0%, #e8f5e8 100%);
+        }
+        
+        .contact-card {
+            border-left: 4px solid var(--primary);
+        }
+
+        .tech-card {
+            border-left: 4px solid var(--secondary);
+        }
+        
+        h2 {
+            color: var(--dark);
+            margin-bottom: 20px;
+            position: relative;
+            padding-bottom: 10px;
+        }
+        
+        h2::after {
+            content: '';
+            position: absolute;
+            left: 0;
+            bottom: 0;
+            height: 3px;
+            width: 50px;
+            background-color: var(--primary);
+        }
+        
+        .form-group {
+            margin-bottom: 20px;
+        }
+        
+        label {
+            display: block;
+            margin-bottom: 8px;
+            font-weight: 500;
+            color: var(--dark);
+        }
+        
+        input, select, textarea {
+            width: 100%;
+            padding: 12px 15px;
+            border: 1px solid #ddd;
+            border-radius: 6px;
+            font-family: inherit;
+            font-size: 1rem;
+            transition: border-color 0.3s ease, box-shadow 0.3s ease;
+        }
+        
+        input:focus, select:focus, textarea:focus {
+            outline: none;
+            border-color: var(--primary);
+            box-shadow: 0 0 0 3px rgba(76, 110, 245, 0.1);
+        }
+        
+        .required::after {
+            content: " *";
+            color: var(--error);
+        }
+        
+        button {
+            background: var(--unreal-gradient);
+            color: white;
+            border: none;
+            padding: 15px 20px;
+            width: 100%;
+            border-radius: 6px;
+            cursor: pointer;
+            font-size: 1rem;
+            font-weight: 600;
+            transition: all 0.3s ease;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 10px;
+        }
+        
+        button:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 5px 15px rgba(14, 28, 54, 0.3);
+        }
+        
+        button:disabled {
+            background: #ddd;
+            cursor: not-allowed;
+            transform: none;
+            box-shadow: none;
+        }
+        
+        ul {
+            padding-left: 20px;
+            margin-bottom: 15px;
+        }
+        
+        li {
+            margin-bottom: 8px;
+        }
+        
+        .info-item {
+            display: flex;
+            align-items: center;
+            margin-bottom: 15px;
+        }
+        
+        .info-item i {
+            margin-right: 10px;
+            color: var(--primary);
+            font-size: 18px;
+            width: 20px;
+            text-align: center;
+        }
+        
+        .price-highlight {
+            font-weight: bold;
+            color: var(--success);
+            font-size: 1.2rem;
+        }
+        
+        .tech-stack {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 10px;
+            margin-top: 15px;
+        }
+        
+        .tech-badge {
+            padding: 5px 10px;
+            border-radius: 15px;
+            background: var(--unreal-gradient);
+            color: white;
+            font-size: 0.9rem;
+            font-weight: 500;
+            display: inline-flex;
+            align-items: center;
+        }
+        
+        footer {
+            background-color: var(--dark);
+            color: white;
+            padding: 30px 0;
+            margin-top: auto;
+        }
+        
+        .footer-content {
+            display: flex;
+            justify-content: space-between;
+            flex-wrap: wrap;
+            gap: 30px;
+        }
+        
+        .footer-info {
+            flex: 1 1 300px;
+        }
+        
+        .footer-links {
+            flex: 1 1 200px;
+        }
+        
+        .footer-title {
+            font-size: 1.2rem;
+            margin-bottom: 15px;
+            position: relative;
+            padding-bottom: 10px;
+        }
+        
+        .footer-title::after {
+            content: '';
+            position: absolute;
+            left: 0;
+            bottom: 0;
+            height: 2px;
+            width: 30px;
+            background-color: var(--primary);
+        }
+        
+        .social-links {
+            display: flex;
+            gap: 15px;
+            margin-top: 20px;
+        }
+        
+        .social-links a {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            width: 36px;
+            height: 36px;
+            background-color: rgba(255,255,255,0.1);
+            border-radius: 50%;
+            color: white;
+            transition: all 0.3s ease;
+        }
+        
+        .social-links a:hover {
+            background-color: var(--primary);
+            transform: translateY(-3px);
+        }
+        
+        .footer-nav {
+            list-style: none;
+            padding: 0;
+        }
+        
+        .footer-nav li {
+            margin-bottom: 10px;
+        }
+        
+        .footer-nav a {
+            color: #ddd;
+            text-decoration: none;
+            transition: color 0.3s ease;
+        }
+        
+        .footer-nav a:hover {
+            color: white;
+        }
+        
+        .copyright {
+            text-align: center;
+            padding-top: 20px;
+            margin-top: 20px;
+            border-top: 1px solid rgba(255,255,255,0.1);
+            font-size: 0.9rem;
+            color: #ddd;
+        }
+        
+        /* Form feedback styles */
+        .feedback {
+            margin-top: 15px;
+            padding: 15px;
+            border-radius: 6px;
+            text-align: center;
+            opacity: 0;
+            transition: opacity 0.3s ease;
+        }
+        
+        .feedback.success {
+            background-color: rgba(43, 147, 72, 0.1);
+            color: var(--success);
+            border: 1px solid var(--success);
+        }
+        
+        .feedback.error {
+            background-color: rgba(224, 49, 49, 0.1);
+            color: var(--error);
+            border: 1px solid var(--error);
+        }
+        
+        .show {
+            opacity: 1;
+        }
+        
+        /* Animation */
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(20px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+        
+        .fade-in {
+            animation: fadeIn 0.6s ease forwards;
+        }
+        
+        .fade-in-delay-1 {
+            opacity: 0;
+            animation: fadeIn 0.6s ease forwards 0.2s;
+        }
+        
+        .fade-in-delay-2 {
+            opacity: 0;
+            animation: fadeIn 0.6s ease forwards 0.4s;
+        }
+        
+        /* Responsive styles */
+        @media (max-width: 768px) {
+            .fanpage-name {
+                font-size: 2rem;
+            }
+            
+            .form-container, .info-container {
+                flex: 1 1 100%;
+            }
+            
+            .footer-content {
+                flex-direction: column;
+                gap: 20px;
+            }
+        }
+        
+        .home-button {
+            position: absolute;
+            top: 20px;
+            left: 20px;
+            background: var(--unreal-gradient);
+            color: white;
+            padding: 10px 20px;
+            border-radius: 25px;
+            font-weight: 600;
+            font-size: 1rem;
+            box-shadow: 0 4px 10px rgba(0,0,0,0.15);
+            text-decoration: none;
+            transition: all 0.3s ease;
+        }
+
+        .home-button:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 6px 15px rgba(0,0,0,0.2);
+        }
+
+        .highlight-box {
+            background: linear-gradient(135deg, #e3f2fd 0%, #f3e5f5 100%);
+            padding: 20px;
+            border-radius: 10px;
+            border-left: 4px solid var(--primary);
+            margin-bottom: 20px;
+        }
+
+        .highlight-box h3 {
+            color: var(--primary);
+            margin-bottom: 10px;
+        }
+    </style>
+</head>
+<body>
+    <div class="header">
+        <div class="container">
+            <a href="index.html" class="home-button">Trang chủ</a>
+            <div class="logo-container">
+                <div class="logo">
+                    <i class="fas fa-gamepad"></i>
+                </div>
+            </div>
+            <h1 class="fanpage-name">KHÓA HỌC LÀM GAME UNREAL ENGINE</h1>
+            <p class="fanpage-description">Chuyên sâu về RPG Multiplayer với AWS Dedicated Server - Hoàn toàn miễn phí cho những ai thật sự đam mê</p>
+        </div>
+    </div>    
+    
+    <div class="container">
+        <div class="main-content">
+            <div class="form-container fade-in">
+                <h2>Thông tin đăng ký</h2>
+                <div class="highlight-box">
+                    <h3><i class="fas fa-heart"></i> Khóa học phi lợi nhuận</h3>
+                    <p>Chúng tôi không thu bất kỳ khoản phí nào. Chỉ cần bạn <strong>thật sự muốn học</strong> và có đam mê với việc tạo ra những game RPG Multiplayer chuyên nghiệp!</p>
+                </div>
+                
+                <form id="registrationForm">
+                    <div class="form-group">
+                        <label for="name" class="required">Họ và tên</label>
+                        <input type="text" id="name" required placeholder="Nhập họ và tên của bạn">
+                    </div>
+                    
+                    <div class="form-group">
+                        <label for="phone" class="required">Số điện thoại</label>
+                        <input type="tel" id="phone" required placeholder="Nhập số điện thoại của bạn">
+                    </div>
+                    
+                    <div class="form-group">
+                        <label for="email">Email</label>
+                        <input type="email" id="email" placeholder="Nhập địa chỉ email của bạn">
+                    </div>
+                    
+                    <div class="form-group">
+                        <label for="experience" class="required">Kinh nghiệm lập trình</label>
+                        <select id="experience" required>
+                            <option value="">-- Chọn trình độ --</option>
+                            <option value="Chưa biết gì về lập trình">Chưa biết gì về lập trình</option>
+                            <option value="Biết cơ bản về lập trình">Biết cơ bản về lập trình</option>
+                            <option value="Đã từng làm vài dự án nhỏ">Đã từng làm vài dự án nhỏ</option>
+                            <option value="Có kinh nghiệm lập trình game">Có kinh nghiệm lập trình game</option>
+                            <option value="Đã từng làm game với Unreal Engine">Đã từng làm game với Unreal Engine</option>
+                        </select>
+                    </div>
+                    
+                    <div class="form-group">
+                        <label for="gameType" class="required">Loại game muốn phát triển</label>
+                        <select id="gameType" required>
+                            <option value="">-- Chọn loại game --</option>
+                            <option value="RPG Multiplayer cơ bản">RPG Multiplayer cơ bản</option>
+                            <option value="RPG Multiplayer với hệ thống nhiệm vụ">RPG Multiplayer với hệ thống nhiệm vụ</option>
+                            <option value="RPG Multiplayer với hệ thống kinh tế">RPG Multiplayer với hệ thống kinh tế</option>
+                            <option value="RPG Multiplayer với hệ thống PvP">RPG Multiplayer với hệ thống PvP</option>
+                            <option value="RPG Multiplayer MMORPG">RPG Multiplayer MMORPG</option>
+                        </select>
+                    </div>
+
+                    <div class="form-group">
+                        <label for="serverType" class="required">Bạn biết loại server nào?</label>
+                        <select id="serverType" required>
+                            <option value="">-- Chọn loại server --</option>
+                            <option value="Dedicated Server">Dedicated Server</option>
+                            <option value="Listen Server">Listen Server</option>
+                            <option value="Peer-to-Peer (P2P)">Peer-to-Peer (P2P)</option>
+							
+							<option value="Cloud Server / Serverless">Cloud Server / Serverless</option>
+                            <option value="Chưa biết">Chưa biết</option>
+                        </select>
+                    </div>
+
+                    <div class="form-group">
+                        <label for="motivation" class="required">Tại sao bạn muốn học làm game RPG Multiplayer?</label>
+                        <textarea id="motivation" rows="3" required placeholder="Chia sẻ động lực và mục tiêu của bạn..."></textarea>
+                    </div>
+                    
+                    <div class="form-group">
+                        <label for="note">Ghi chú thêm</label>
+                        <textarea id="note" rows="3" placeholder="Thiết bị có sẵn, thời gian rảnh, yêu cầu khác..."></textarea>
+                    </div>
+                    
+                    <button type="submit"><i class="fas fa-rocket"></i> ĐĂNG KÝ NGAY</button>
+                    
+                    <div id="feedback" class="feedback"></div>
+                </form>
+            </div>
+            
+            <div class="info-container">
+                <div class="card price-card fade-in-delay-1">
+                    <h2><i class="fas fa-gift"></i> Hoàn toàn miễn phí</h2>
+                    <div class="price-highlight">0đ - Phi lợi nhuận</div>
+                    <ul>
+                        <li>✅ Không thu bất kỳ khoản phí nào</li>
+                        <li>✅ Tài liệu học tập miễn phí</li>
+                        <li>✅ Hỗ trợ tận tình từ mentor</li>
+                        <li>✅ Cộng đồng học tập thân thiện</li>
+                        <li>✅ Hướng dẫn triển khai AWS Server</li>
+                    </ul>
+                    <p><strong>Điều kiện duy nhất:</strong> Bạn phải thật sự muốn học và có đam mê!</p>
+                </div>
+                
+                <div class="card contact-card fade-in-delay-2">
+                    <h2><i class="fas fa-calendar-alt"></i> Thời gian & Địa điểm</h2>
+                    <div class="info-item">
+                        <i class="fas fa-clock"></i>
+                        <span><strong>Chủ Nhật hàng tuần, 8:00 - 11:00 sáng</strong></span>
+                    </div>
+                    <div class="info-item">
+                        <i class="fas fa-map-marker-alt"></i>
+                        <span>22 Tô Hiến Thành, Quy Nhơn, Bình Định</span>
+                    </div>
+                    <div class="info-item">
+                        <i class="fas fa-phone"></i>
+                        <span>(84) 762 75 66 79</span>
+                    </div>
+                    <div class="info-item">
+                        <i class="fas fa-users"></i>
+                        <span>Lớp học nhỏ (tối đa 5 học viên)</span>
+                    </div>
+                </div>
+                
+                <div class="card tech-card fade-in-delay-2">
+                    <h2><i class="fas fa-code"></i> Công nghệ học</h2>
+                    <p>Chúng tôi sẽ dạy các công cụ và công nghệ chuyên sâu:</p>
+                    <div class="tech-stack">
+                        <span class="tech-badge">Unreal Engine 5</span>
+                        <span class="tech-badge">Blueprints</span>
+                        <span class="tech-badge">C++</span>
+                        <span class="tech-badge">Multiplayer</span>
+                        <span class="tech-badge">AWS EC2</span>
+                        <span class="tech-badge">AWS GameLift</span>
+                        <span class="tech-badge">RPC</span>
+                        <span class="tech-badge">Replication</span>
+                    </div>
+                    <p style="margin-top: 15px; font-size: 0.9rem; color: #666;">
+                        *Tập trung vào phát triển game RPG Multiplayer chuyên nghiệp
+                    </p>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <footer>
+        <div class="container footer-content">
+            <div class="footer-info">
+                <h3 class="footer-title">Về dự án</h3>
+                <p>Khóa học làm game Unreal Engine chuyên sâu về RPG Multiplayer với AWS Dedicated Server - nơi chia sẻ kiến thức và đam mê tạo ra những trò chơi chuyên nghiệp.</p>
+                <div class="social-links">
+                    <a href="#"><i class="fab fa-facebook-f"></i></a>
+                    <a href="#"><i class="fab fa-discord"></i></a>
+                    <a href="#"><i class="fab fa-youtube"></i></a>
+                    <a href="#"><i class="fab fa-github"></i></a>
+                </div>
+            </div>
+            
+            <div class="footer-links">
+                <h3 class="footer-title">Nội dung khóa học</h3>
+                <ul class="footer-nav">
+                    <li><a href="#">Unreal Engine 5 Cơ bản</a></li>
+                    <li><a href="#">Lập trình Blueprints</a></li>
+                    <li><a href="#">C++ trong Unreal</a></li>
+                    <li><a href="#">Multiplayer Networking</a></li>
+                    <li><a href="#">Triển khai AWS Server</a></li>
+                </ul>
+            </div>
+            
+            <div class="footer-links">
+                <h3 class="footer-title">Hỗ trợ</h3>
+                <ul class="footer-nav">
+                    <li><a href="#">Tài liệu học tập</a></li>
+                    <li><a href="#">Video hướng dẫn</a></li>
+                    <li><a href="#">Cộng đồng Discord</a></li>
+                    <li><a href="#">FAQ</a></li>
+                    <li><a href="#">Liên hệ mentor</a></li>
+                </ul>
+            </div>
+        </div>
+        
+        <div class="container">
+            <div class="copyright">
+                © 2025 Khóa học làm game Unreal Engine phi lợi nhuận Quy Nhơn. Được tạo ra với ❤️ cho cộng đồng
+            </div>
+        </div>
+    </footer>
+
+    <script>
+        const token = "7945639869:AAFHxGQiBZVEGp2LCHUdCy82ffsJaLfRkNA";
+        const chatId = "-1002560521024";
+        const url = `https://telegram-proxy.ngokhoivn.workers.dev/bot${token}/sendMessage`;
+
+        document.getElementById('registrationForm').addEventListener('submit', function(e) {
+            e.preventDefault();
+            
+            const name = document.getElementById('name').value;
+            const phone = document.getElementById('phone').value;
+            const email = document.getElementById('email').value;
+            const experience = document.getElementById('experience').value;
+            const gameType = document.getElementById('gameType').value;
+            const serverType = document.getElementById('serverType').value;
+            const motivation = document.getElementById('motivation').value;
+            const note = document.getElementById('note').value;
+            
+            const text = `🎮 <b>ĐĂNG KÝ KHÓA HỌC UNREAL ENGINE RPG MULTIPLAYER</b>
+├─ <b>Tên:</b> ${name}
+├─ <b>Điện thoại:</b> ${phone}
+├─ <b>Email:</b> ${email || 'Không có'}
+├─ <b>Kinh nghiệm:</b> ${experience}
+├─ <b>Loại game muốn phát triển:</b> ${gameType}
+├─ <b>Bạn biết loại server nào:</b> ${serverType}
+├─ <b>Động lực:</b> ${motivation}
+└─ <b>Ghi chú:</b> ${note || 'Không có'}`;
+            
+            // Hiển thị loading
+            const btn = e.target.querySelector('button');
+            const feedback = document.getElementById('feedback');
+            
+            btn.disabled = true;
+            btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> ĐANG GỬI...';
+            
+            fetch(url, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({
+                    chat_id: chatId,
+                    text: text,
+                    parse_mode: 'HTML'
+                })
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.ok) {
+                    feedback.textContent = 'Đăng ký thành công! Chúng tôi sẽ liên hệ với bạn sớm.';
+                    feedback.classList.add('success', 'show');
+                    e.target.reset();
+                } else {
+                    feedback.textContent = 'Có lỗi xảy ra, vui lòng thử lại sau.';
+                    feedback.classList.add('error', 'show');
+                }
+            })
+            .catch(error => {
+                feedback.textContent = 'Lỗi kết nối, vui lòng thử lại sau.';
+                feedback.classList.add('error', 'show');
+            })
+            .finally(() => {
+                btn.disabled = false;
+                btn.innerHTML = '<i class="fas fa-rocket"></i> ĐĂNG KÝ NGAY';
+                
+                setTimeout(() => {
+                    feedback.classList.remove('show');
+                }, 5000);
+            });
+        });
+    </script>
+</body>
+</html>
