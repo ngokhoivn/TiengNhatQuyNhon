@@ -13,7 +13,6 @@ const DEBOUNCE_TIME = 1000; // 1 giây
 const apiCache = {};
 // API keys declaration
 const apiKeys = [
-    'AIzaSyDjgTk4uZQUCpFH5Zt8ZgP2CW-jhmkLv8o',
     'AIzaSyDaROReiR48rjfavf8Lk6XvphC6QxKPZo4',
     'AIzaSyD-LQ7BMIl85o0Tq3LogG2rBmtYjkOpogU'
 ];
