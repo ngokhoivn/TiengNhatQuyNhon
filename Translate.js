@@ -1,4 +1,3 @@
-
 document.addEventListener('DOMContentLoaded', () => {
     // DOM elements
     const elements = {		
@@ -26,6 +25,19 @@ document.addEventListener('DOMContentLoaded', () => {
         detectedLanguage: document.getElementById('detectedLanguage'),
     };
 
+    // API Configuration
+    const API_KEYS = [
+        'AIzaSyDjgTk4uZQUCpFH5Zt8ZgP2CW-jhmkLv8o',
+        'AIzaSyDaROReiR48rjfavf8Lk6XvphC6QxKPZo4',
+        'AIzaSyD-LQ7BMIl85o0Tq3LogG2rBmtYjkOpogU'
+    ];
+    const API_CALL_DELAY = 1000; // 1 second delay between API calls
+    const MAX_RETRIES = 3;
+    
+    let currentApiKeyIndex = 0;
+    let lastApiCallTime = 0;
+    let retryCount = 0;
+
     // Chat button event
     const chatButton = document.getElementById('chat-button');
     if (chatButton) {
@@ -34,20 +46,15 @@ document.addEventListener('DOMContentLoaded', () => {
         });
     }
 
-    // Check if any required element is missing and initialize it if needed
+    // Initialize any missing elements
     Object.entries(elements).forEach(([key, element]) => {
         if (!element && key !== 'tabs' && key !== 'tabContents') {
             console.warn(`Element '${key}' not found in the DOM. Creating placeholder.`);
-            
-            // Create placeholder element
             const placeholder = document.createElement('div');
             placeholder.id = key;
             
-            // Special handling for containers that need to exist
             if (key === 'vocabListContainer') {
                 placeholder.id = 'vocabList';
-                
-                // If vocabularyDiv is also null, create it too
                 if (!elements.vocabularyDiv) {
                     const vocabDiv = document.createElement('div');
                     vocabDiv.id = 'vocabulary';
@@ -62,21 +69,16 @@ document.addEventListener('DOMContentLoaded', () => {
                 document.body.appendChild(placeholder);
             }
             
-            // Update the reference in elements object
             elements[key] = placeholder;
         }
     });
-
-    const GEMINI_API_KEY = "AIzaSyD-LQ7BMIl85o0Tq3LogG2rBmtYjkOpogU";
 
     // Tab switching functionality
     elements.tabs.forEach(tab => {
         tab.addEventListener('click', () => {
             const tabId = tab.getAttribute('data-tab');
-
             elements.tabs.forEach(t => t.classList.remove('active'));
             elements.tabContents.forEach(c => c.classList.remove('active'));
-
             tab.classList.add('active');
             document.getElementById(tabId).classList.add('active');
 
@@ -87,36 +89,90 @@ document.addEventListener('DOMContentLoaded', () => {
     });
 
     /**
+     * Get next API key with round-robin strategy
+     */
+    function getNextApiKey() {
+        currentApiKeyIndex = (currentApiKeyIndex + 1) % API_KEYS.length;
+        return API_KEYS[currentApiKeyIndex];
+    }
+
+    /**
+     * Call Gemini API with retry mechanism
+     */
+    async function fetchFromGemini(promptText, retry = 0) {
+        const now = Date.now();
+        const timeSinceLastCall = now - lastApiCallTime;
+        
+        // Respect API call delay
+        if (timeSinceLastCall < API_CALL_DELAY) {
+            await new Promise(resolve => setTimeout(resolve, API_CALL_DELAY - timeSinceLastCall));
+        }
+
+        try {
+            lastApiCallTime = Date.now();
+            const currentApiKey = API_KEYS[currentApiKeyIndex];
+            
+            const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash-latest:generateContent?key=${currentApiKey}`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ contents: [{ parts: [{ text: promptText }] }] })
+            });
+
+            if (!response.ok) {
+                const errorData = await response.json();
+                if (errorData.error?.code === 429 || response.status === 429) {
+                    throw new Error('API_QUOTA_EXCEEDED');
+                }
+                throw new Error(errorData.error?.message || `API request failed with status ${response.status}`);
+            }
+
+            const data = await response.json();
+            retryCount = 0; // Reset retry count on success
+            
+            if (!data.candidates?.[0]?.content?.parts?.[0]?.text) {
+                throw new Error('Invalid API response structure');
+            }
+            
+            return data;
+        } catch (error) {
+            console.error(`API call failed (attempt ${retry + 1}):`, error);
+            
+            if (retry < MAX_RETRIES - 1 && error.message === 'API_QUOTA_EXCEEDED') {
+                // Switch to next API key and retry
+                getNextApiKey();
+                return fetchFromGemini(promptText, retry + 1);
+            }
+            
+            throw new Error(`Failed to call Gemini API: ${error.message}`);
+        }
+    }
+
+    /**
      * Detect language of the input text
-     * @param {string} text - Text to analyze
-     * @returns {string} Language code ('ja-JP' or 'vi-VN')
      */
     function detectLanguage(text) {
-        // Simple detection based on Japanese characters
         const japaneseRegex = /[\u3040-\u309F\u30A0-\u30FF\u4E00-\u9FAF]/;
         return japaneseRegex.test(text) ? 'ja-JP' : 'vi-VN';
     }
 
-	/**
-	 * Update language display in UI
-	 * @param {string} lang - Language code ('ja-JP' or 'vi-VN')
-	 */
-	function updateLanguageDisplay(lang) {
-		if (elements.status) {
-			const langText = lang === 'ja-JP' ? 'Japanese' : 'Vietnamese';
-			elements.status.innerHTML = lang 
-				? `<i class="fas fa-language"></i><span>${langText} detected</span>`
-				: '<i class="fas fa-info-circle"></i><span>Enter text to analyze...</span>';
-		}
-	}
+    /**
+     * Update language display in UI
+     */
+    function updateLanguageDisplay(lang) {
+        if (elements.status) {
+            const langText = lang === 'ja-JP' ? 'Japanese' : 'Vietnamese';
+            elements.status.innerHTML = lang 
+                ? `<i class="fas fa-language"></i><span>${langText} detected</span>`
+                : '<i class="fas fa-info-circle"></i><span>Enter text to analyze...</span>';
+        }
+    }
 
     /**
      * Get current language of the input text
-     * @returns {string} Language code ('ja-JP' or 'vi-VN')
      */
     function getCurrentLanguage() {
         const text = elements.editableText.value.trim();
-        if (!text) return 'ja-JP'; // Default to Japanese if no text
+        if (!text) return 'ja-JP';
         
         const detectedLang = detectLanguage(text);
         updateLanguageDisplay(detectedLang);
@@ -125,7 +181,6 @@ document.addEventListener('DOMContentLoaded', () => {
 
     /**
      * Toggles the disabled state of action buttons
-     * @param {boolean} enabled - Whether to enable or disable buttons
      */
     function toggleActionButtons(enabled) {
         elements.improveBtn.disabled = !enabled;
@@ -136,8 +191,6 @@ document.addEventListener('DOMContentLoaded', () => {
 
     /**
      * Formats date for display
-     * @param {string} dateString - ISO date string
-     * @returns {string} Formatted date
      */
     function formatDate(dateString) {
         const date = new Date(dateString);
@@ -151,31 +204,7 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     /**
-     * Calls Gemini API with given prompt
-     * @param {string} promptText - The prompt to send to Gemini
-     * @returns {Promise<Object>} API response
-     */
-    async function fetchFromGemini(promptText) {
-        const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash-latest:generateContent?key=${GEMINI_API_KEY}`, {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ contents: [{ parts: [{ text: promptText }] }] })
-        });
-
-        if (!response.ok) {
-            const errorData = await response.json();
-            throw new Error(errorData.error?.message || 'API request failed');
-        }
-
-        return response.json();
-    }
-
-    /**
      * Translates text using Gemini API
-     * @param {string} text - Text to translate
-     * @param {string} sourceLang - Source language code
-     * @param {string} targetLang - Target language code
-     * @returns {Promise<string>} Translated text
      */
     async function translateText(text, sourceLang, targetLang) {
         const sourceLangName = sourceLang === 'ja-JP' ? 'Japanese' : 'Vietnamese';
@@ -194,20 +223,15 @@ document.addEventListener('DOMContentLoaded', () => {
 
     /**
      * Creates prompt for alternative expressions
-     * @param {string} text - Text to rephrase
-     * @param {string} currentLang - Current language code
-     * @returns {string} Prompt text
      */
     function createReverseExpressionPrompt(text, currentLang) {
         const fromLang = currentLang === 'ja-JP' ? 'Japanese' : 'Vietnamese';
         const toLang = currentLang === 'ja-JP' ? 'Vietnamese' : 'Japanese';
 
-        return `
-            You are a language expert. Provide 3 alternative ways to express the following text in ${toLang} that sound natural and maintain the same meaning:
-            "${text}"
-            Return the results as a JSON array:
-            ["expression 1", "expression 2", "expression 3"]
-        `;
+        return `You are a language expert. Provide 3 alternative ways to express the following text in ${toLang} that sound natural and maintain the same meaning:
+"${text}"
+Return the results as a JSON array:
+["expression 1", "expression 2", "expression 3"]`;
     }
 
     /**
@@ -223,7 +247,6 @@ document.addEventListener('DOMContentLoaded', () => {
         }
 
         elements.clearHistoryBtn.classList.remove('hidden');
-
         const historyHTML = history.map((item, index) => {
             const shortText = item.text.length > 50 ? item.text.substring(0, 50) + '...' : item.text;
             return `
@@ -255,7 +278,6 @@ document.addEventListener('DOMContentLoaded', () => {
             item.addEventListener('click', (e) => {
                 if (!e.target.closest('.history-action-btn')) {
                     elements.editableText.value = historyItem.text;
-                    // Update language display when loading from history
                     updateLanguageDisplay(historyItem.language);
                     document.querySelector('.tab[data-tab="editor"]').click();
                     toggleActionButtons(true);
@@ -303,52 +325,52 @@ document.addEventListener('DOMContentLoaded', () => {
 
     /**
      * Gets improved text and suggestions from Gemini
-     * @param {string} text - Text to improve
-     * @param {string} language - Language code (ja-JP or vi-VN)
-     * @returns {Promise<Object>} Corrected text and suggestions
      */
     async function getImprovedTextAndSuggestions(text, language) {
-        const promptText = `
-            You are a language expert. Please analyze and improve the following text in ${language === 'ja-JP' ? 'Japanese' : 'Vietnamese'}:
-            1. Fix any spelling and grammar mistakes
-            2. Return the corrected version
-            3. Suggest 2-3 more natural ways to express the same idea
-            Text: "${text}"
-            Return the response in JSON format:
-            {
-              "corrected_text": "corrected text",
-              "suggestions": ["suggestion 1", "suggestion 2", "suggestion 3"]
-            }
-        `;
+        const promptText = `You are a language expert. Please analyze and improve the following text in ${language === 'ja-JP' ? 'Japanese' : 'Vietnamese'}:
+1. Fix any spelling and grammar mistakes
+2. Return the corrected version
+3. Suggest 2-3 more natural ways to express the same idea
+Text: "${text}"
+Return the response in JSON format:
+{
+  "corrected_text": "corrected text",
+  "suggestions": ["suggestion 1", "suggestion 2", "suggestion 3"]
+}`;
+
         const response = await fetchFromGemini(promptText);
         const responseText = response.candidates[0].content.parts[0].text;
-        const jsonMatch = responseText.match(/\{[\s\S]*\}/);
-        if (!jsonMatch) throw new Error('Could not parse Gemini response');
-        return JSON.parse(jsonMatch[0]);
+        
+        try {
+            const jsonMatch = responseText.match(/\{[\s\S]*\}/);
+            if (!jsonMatch) throw new Error('Could not parse Gemini response');
+            return JSON.parse(jsonMatch[0]);
+        } catch (e) {
+            // Fallback if JSON parsing fails
+            return {
+                corrected_text: responseText,
+                suggestions: []
+            };
+        }
     }
 
     /**
      * Generates prompt for next sentence suggestions
-     * @param {string} text - Current text
-     * @param {string} language - Language code
-     * @returns {string} Prompt text
      */
     function createSuggestionPrompt(text, language) {
         return `Based on the following text, suggest 3 short, natural sentences that the person might want to say next in this conversation.
-            Text: "${text}"
-            Keep the suggestions in ${language === 'ja-JP' ? 'Japanese' : 'Vietnamese'}.
-            Format each suggestion as a JSON object in an array:
-            [
-                {"suggestion": "suggestion 1"},
-                {"suggestion": "suggestion 2"},
-                {"suggestion": "suggestion 3"}
-            ]`;
+Text: "${text}"
+Keep the suggestions in ${language === 'ja-JP' ? 'Japanese' : 'Vietnamese'}.
+Format each suggestion as a JSON object in an array:
+[
+    {"suggestion": "suggestion 1"},
+    {"suggestion": "suggestion 2"},
+    {"suggestion": "suggestion 3"}
+]`;
     }
 
     /**
      * Extracts suggestions from API response
-     * @param {Object} responseData - API response
-     * @returns {string[]} Array of suggestions
      */
     function extractSuggestions(responseData) {
         try {
@@ -366,8 +388,6 @@ document.addEventListener('DOMContentLoaded', () => {
 
     /**
      * Displays suggestions in the UI
-     * @param {string[]} suggestions - List of suggestions
-     * @param {HTMLElement} container - Container to display suggestions
      */
     function displaySuggestions(suggestions, container = elements.nextSuggestionList) {
         if (!container) {
@@ -458,14 +478,12 @@ document.addEventListener('DOMContentLoaded', () => {
             return;
         }
 
-        // Make sure the vocabulary div exists
         if (!elements.vocabularyDiv) {
             console.error('Vocabulary div not found');
             elements.status.innerHTML = '<i class="fas fa-exclamation-triangle"></i><span>Error: Vocabulary container not found</span>';
             return;
         }
 
-        // Make sure vocabListContainer exists
         if (!elements.vocabListContainer) {
             console.error('Vocab list container not found');
             const vocabList = document.createElement('div');
@@ -474,25 +492,22 @@ document.addEventListener('DOMContentLoaded', () => {
             elements.vocabListContainer = vocabList;
         }
 
-        // Gỡ phần từ vựng cũ nếu có
         const parts = sentence.split('\n\n# Từ vựng:');
         let originalTextForVocab = parts[0].trim();
 
-        const prompt = `
-            Bạn là một trợ lý dạy tiếng Nhật. Hãy trích xuất các từ vựng chính trong câu sau và trả về dưới dạng JSON với định dạng: 
-            [
-                {"kanji": "Kanji (nếu có)", "hiragana": "Hiragana", "meaning": "Nghĩa tiếng Việt"},
-                ...
-            ]
-            Nếu từ không có Kanji, để kanji là chuỗi rỗng (""). Chỉ trích xuất các từ vựng quan trọng (danh từ, động từ, tính từ).
-            Câu: "${originalTextForVocab}"
-            Ví dụ:
-            [
-                {"kanji": "学校", "hiragana": "がっこう", "meaning": "trường học"},
-                {"kanji": "", "hiragana": "たべる", "meaning": "ăn"}
-            ]
-            Trả về chỉ JSON, không thêm bất kỳ văn bản giải thích hoặc ký tự như \`\`\`json.
-        `;
+        const prompt = `Bạn là một trợ lý dạy tiếng Nhật. Hãy trích xuất các từ vựng chính trong câu sau và trả về dưới dạng JSON với định dạng: 
+[
+    {"kanji": "Kanji (nếu có)", "hiragana": "Hiragana", "meaning": "Nghĩa tiếng Việt"},
+    ...
+]
+Nếu từ không có Kanji, để kanji là chuỗi rỗng (""). Chỉ trích xuất các từ vựng quan trọng (danh từ, động từ, tính từ).
+Câu: "${originalTextForVocab}"
+Ví dụ:
+[
+    {"kanji": "学校", "hiragana": "がっこう", "meaning": "trường học"},
+    {"kanji": "", "hiragana": "たべる", "meaning": "ăn"}
+]
+Trả về chỉ JSON, không thêm bất kỳ văn bản giải thích hoặc ký tự như \`\`\`json.`;
 
         try {
             elements.vocabBtn.disabled = true;
@@ -500,8 +515,6 @@ document.addEventListener('DOMContentLoaded', () => {
 
             const response = await fetchFromGemini(prompt);
             let responseText = response.candidates[0].content.parts[0].text.trim();
-
-            // Loại bỏ các ký tự không mong muốn như ```json
             responseText = responseText.replace(/```json|```/g, '').trim();
 
             let vocabList;
@@ -519,7 +532,6 @@ document.addEventListener('DOMContentLoaded', () => {
                 return;
             }
 
-            // Hiển thị danh sách từ vựng trong div
             elements.vocabListContainer.innerHTML = vocabList
                 .map(item => `
                     <div class="vocabulary-item">
@@ -532,11 +544,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
             elements.vocabularyDiv.classList.remove('hidden');
             elements.status.innerHTML = '<i class="fas fa-check-circle"></i><span>Trích xuất từ vựng thành công!</span>';
-
-            // Cập nhật textarea chỉ chứa văn bản gốc
             textarea.value = originalTextForVocab;
-
-            // Kích hoạt lại các nút sau khi trích xuất
             toggleActionButtons(true);
         } catch (err) {
             console.error('Vocabulary extraction error:', err);
@@ -554,19 +562,19 @@ document.addEventListener('DOMContentLoaded', () => {
     });
 
     // Event listeners
-	elements.editableText.addEventListener('input', () => {
-		const text = elements.editableText.value.trim();
-		const hasText = !!text;
-		
-		if (hasText) {
-			const detectedLang = detectLanguage(text);
-			updateLanguageDisplay(detectedLang);
-		} else {
-			updateLanguageDisplay(null);
-		}
-		
-		toggleActionButtons(hasText);
-	});
+    elements.editableText.addEventListener('input', () => {
+        const text = elements.editableText.value.trim();
+        const hasText = !!text;
+        
+        if (hasText) {
+            const detectedLang = detectLanguage(text);
+            updateLanguageDisplay(detectedLang);
+        } else {
+            updateLanguageDisplay(null);
+        }
+        
+        toggleActionButtons(hasText);
+    });
 
     elements.improveBtn.addEventListener('click', improveWithGemini);
     elements.suggestBtn.addEventListener('click', generateNextSuggestions);
@@ -625,36 +633,23 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     });
 
-	elements.clearSuggestionsBtn.addEventListener('click', () => {
-		// Xóa nội dung ô nhập văn bản
-		if (elements.editableText) elements.editableText.value = '';
-		
-		// Xóa các gợi ý
-		if (elements.suggestions) elements.suggestions.innerHTML = '';
-		if (elements.nextSuggestionList) elements.nextSuggestionList.innerHTML = '';
-		
-		// Xóa phần từ vựng
-		if (elements.vocabListContainer) elements.vocabListContainer.innerHTML = '';
-		
-		// Ẩn các khung chứa
-		if (elements.correctionsBox) elements.correctionsBox.classList.add('hidden');
-		if (elements.nextSuggestions) elements.nextSuggestions.classList.add('hidden');
-		if (elements.vocabularyDiv) elements.vocabularyDiv.classList.add('hidden');
-		
-		// Reset trạng thái ngôn ngữ
-		updateLanguageDisplay(null);
-		
-		// Vô hiệu hóa các nút chức năng
-		toggleActionButtons(false);
-		
-		// Hiển thị thông báo
-		elements.status.innerHTML = '<i class="fas fa-check-circle"></i><span>Cleared all content</span>';
-		setTimeout(() => {
-			elements.status.innerHTML = '<i class="fas fa-info-circle"></i><span>Ready</span>';
-		}, 2000);
-	});
+    elements.clearSuggestionsBtn.addEventListener('click', () => {
+        if (elements.editableText) elements.editableText.value = '';
+        if (elements.suggestions) elements.suggestions.innerHTML = '';
+        if (elements.nextSuggestionList) elements.nextSuggestionList.innerHTML = '';
+        if (elements.vocabListContainer) elements.vocabListContainer.innerHTML = '';
+        if (elements.correctionsBox) elements.correctionsBox.classList.add('hidden');
+        if (elements.nextSuggestions) elements.nextSuggestions.classList.add('hidden');
+        if (elements.vocabularyDiv) elements.vocabularyDiv.classList.add('hidden');
+        updateLanguageDisplay(null);
+        toggleActionButtons(false);
+        elements.status.innerHTML = '<i class="fas fa-check-circle"></i><span>Cleared all content</span>';
+        setTimeout(() => {
+            elements.status.innerHTML = '<i class="fas fa-info-circle"></i><span>Ready</span>';
+        }, 2000);
+    });
     
-    // Thêm sự kiện đóng vocabulary
+    // Close vocabulary button
     document.querySelector('.close-vocab-btn')?.addEventListener('click', () => {
         elements.vocabularyDiv?.classList.add('hidden');
     });

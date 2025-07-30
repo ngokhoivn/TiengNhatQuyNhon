@@ -5,18 +5,13 @@ let wrongWords = [];
 let currentCycle = 1;
 let totalCycles = 2;
 let isChecking = false;
-let speechSynthesis = window.speechSynthesis;
-let autoSpeakEnabled = true; // New variable to control auto-speaking
-let lastCheckTime = 0;
-
-const DEBOUNCE_TIME = 1000; // 1 giây
 const apiCache = {};
 // API keys declaration
 const apiKeys = [
+    'AIzaSyDjgTk4uZQUCpFH5Zt8ZgP2CW-jhmkLv8o',
     'AIzaSyDaROReiR48rjfavf8Lk6XvphC6QxKPZo4',
     'AIzaSyD-LQ7BMIl85o0Tq3LogG2rBmtYjkOpogU'
 ];
-let currentApiKeyIndex = 0; // Added to track the current API key
 
 // Element references
 const tabs = document.querySelectorAll('.tab');
@@ -24,6 +19,7 @@ const tabContents = document.querySelectorAll('.tab-content');
 const vocabularyInput = document.getElementById('vocabularyInput');
 const shuffleCheckbox = document.getElementById('shuffleCheckbox');
 const cycleCountInput = document.getElementById('cycleCount');
+const startLearningBtn = document.getElementById('startLearning');
 const kanjiDisplay = document.getElementById('kanjiDisplay');
 const answerInput = document.getElementById('answerInput');
 const checkAnswerBtn = document.getElementById('checkAnswer');
@@ -36,318 +32,8 @@ const progressBarFill = document.querySelector('.progress-bar-fill');
 const restartLearningBtn = document.getElementById('restartLearning');
 const wrongWordsTextarea = document.getElementById('wrongWords');
 const copyAndRelearnBtn = document.getElementById('copyAndRelearn');
-const clearVocabularyBtn = document.getElementById('clearVocabulary');
-const voiceButton = document.getElementById('voiceButton');
-const outputDiv = document.getElementById('output');
-const speakCurrentWord = document.getElementById('speakCurrentWord');
-const startLearningBtn = document.getElementById('startLearning');
-const autoSpeakToggle = document.getElementById('autoSpeakToggle'); // New element for toggling auto-speak
 
-// Initialize restart learning button
-if (restartLearningBtn) {
-    restartLearningBtn.addEventListener('click', () => {
-        if (confirm('Bạn có chắc muốn bắt đầu lại từ đầu? Tiến độ hiện tại sẽ bị mất.')) {
-            // Reset entire state
-            vocabulary = [];
-            currentIndex = 0;
-            wrongWords = [];
-            currentCycle = 1;
-            isChecking = false;
-            
-            // Clear saved data
-            localStorage.removeItem('vocabularyLearnerState');
-            
-            // Reset UI
-            answerInput.value = '';
-            resultDisplay.classList.add('hidden');
-            meaningDisplay.textContent = '';
-            progressText.textContent = '0/0';
-            progressBarFill.style.width = '0%';
-            cycleText.textContent = `Chu kỳ: 0/${totalCycles}`;
-            
-            // Switch to input tab and focus on input field
-            document.querySelector('[data-tab="input"]').click();
-            vocabularyInput.focus();
-        }
-    });
-}
-
-// Setup auto-speak toggle if it exists
-if (autoSpeakToggle) {
-    autoSpeakToggle.addEventListener('change', () => {
-        autoSpeakEnabled = autoSpeakToggle.checked;
-        localStorage.setItem('autoSpeakEnabled', autoSpeakEnabled);
-    });
-    
-    // Load saved preference
-    const savedAutoSpeak = localStorage.getItem('autoSpeakEnabled');
-    if (savedAutoSpeak !== null) {
-        autoSpeakEnabled = savedAutoSpeak === 'true';
-        autoSpeakToggle.checked = autoSpeakEnabled;
-    }
-}
-
-const speakButton = document.getElementById('speakButton');
-
-// Add check answer event listener
-if (checkAnswerBtn) {
-    checkAnswerBtn.addEventListener('click', () => {
-        if (!isChecking) checkAnswer();
-    });
-}
-
-// Add skip word event listener - This was missing
-if (skipWordBtn) {
-    skipWordBtn.addEventListener('click', async () => {
-        if (isChecking) return;
-        
-        try {
-            isChecking = true;
-            skipWordBtn.disabled = true;
-            checkAnswerBtn.disabled = true;
-            
-            const currentWord = vocabulary[currentIndex];
-            resultDisplay.textContent = `Đã bỏ qua: ${currentWord.hiragana}`;
-            resultDisplay.className = "result skip";
-            resultDisplay.classList.remove("hidden");
-            meaningDisplay.textContent = currentWord.meaning || "";
-            
-            if (!wrongWords.some(word => word.kanji === currentWord.kanji)) {
-                wrongWords.push(currentWord);
-            }
-            
-            await new Promise(resolve => setTimeout(resolve, 1000));
-            await moveToNextWord();
-        } catch (error) {
-            console.error("Error during skip:", error);
-        } finally {
-            // ĐẢM BẢO LUÔN RESET LẠI TRẠNG THÁI
-            isChecking = false;
-            skipWordBtn.disabled = false;
-            checkAnswerBtn.disabled = false;
-            
-            // Thêm delay nhỏ để đảm bảo UI cập nhật
-            setTimeout(() => {
-                checkAnswerBtn.disabled = false;
-            }, 50);
-        }
-    });
-}
-
-// Add Enter key shortcut for checking answer
-document.addEventListener('keydown', (e) => {
-    if (e.key === 'Enter' && document.getElementById('learning').classList.contains('active') && !isChecking) {
-        e.preventDefault();
-        checkAnswer();
-    } else if (e.key === 'ArrowRight' && document.getElementById('learning').classList.contains('active') && !isChecking) {
-        // Add right arrow key shortcut for skipping
-        e.preventDefault();
-        if (skipWordBtn) skipWordBtn.click();
-    }
-});
-
-// Setup speak current word button
-if (speakCurrentWord) {
-    speakCurrentWord.addEventListener('click', () => {
-        if (currentIndex < vocabulary.length) {
-            speakWord(vocabulary[currentIndex].hiragana);
-        }
-    });
-}
-
-// Speech recognition variables
-let recognition = null;
-let isListening = false;
-let interimResult = "";
-let recognitionTimeout = null;
-
-// Function to speak a word
-function speakWord(text) {
-    if (!speechSynthesis) {
-        console.error("Speech synthesis not supported");
-        return;
-    }
-
-    // Cancel current speech if any
-    speechSynthesis.cancel();
-    
-    const utterance = new SpeechSynthesisUtterance(text);
-    utterance.lang = 'ja-JP';
-    utterance.rate = 0.9;
-    
-    // Get available voices and find a Japanese one
-    const voices = speechSynthesis.getVoices();
-    const japaneseVoice = voices.find(voice => 
-        voice.lang.includes('ja') || voice.lang.includes('JP')
-    );
-    
-    if (japaneseVoice) {
-        utterance.voice = japaneseVoice;
-    }
-    
-    // Add error handling for speech synthesis
-    utterance.onerror = (event) => {
-        console.error("Speech synthesis error:", event);
-    };
-    
-    speechSynthesis.speak(utterance);
-}
-
-// Initialize speak button
-if (speakButton) {
-    speakButton.addEventListener('click', () => {
-        if (currentIndex < vocabulary.length) {
-            speakWord(vocabulary[currentIndex].hiragana);
-        }
-    });
-}
-
-// Voice recognition setup
-function setupVoiceRecognition() {
-    if (!recognition) {
-        try {
-            recognition = new (window.SpeechRecognition || window.webkitSpeechRecognition)();
-            recognition.lang = 'ja-JP';
-            recognition.interimResults = true;
-            recognition.continuous = true;
-            recognition.maxAlternatives = 3;
-
-            recognition.onstart = () => {
-                isListening = true;
-                voiceButton.classList.add('recording');
-                outputDiv.textContent = "Đang nghe...";
-                outputDiv.classList.remove('hidden');
-                
-                if (recognitionTimeout) {
-                    clearTimeout(recognitionTimeout);
-                }
-            };
-
-            recognition.onerror = (event) => {
-                console.error('Recognition error:', event.error);
-                
-                if (event.error === 'no-speech') {
-                    outputDiv.textContent = "Không nghe thấy gì. Vui lòng nói to hơn.";
-                } else if (event.error === 'network') {
-                    outputDiv.textContent = "Lỗi kết nối mạng. Vui lòng kiểm tra kết nối.";
-                } else {
-                    outputDiv.textContent = "Lỗi: " + event.error;
-                }
-                
-                if (isListening && event.error !== 'not-allowed' && event.error !== 'service-not-allowed') {
-                    setTimeout(() => {
-                        if (isListening) recognition.start();
-                    }, 1000);
-                } else {
-                    stopVoiceRecognition();
-                }
-            };
-
-            recognition.onend = () => {
-                if (isListening) {
-                    setTimeout(() => {
-                        if (isListening) recognition.start();
-                    }, 500);
-                } else {
-                    voiceButton.classList.remove('recording');
-                }
-            };
-
-            recognition.onresult = (event) => {
-                let finalTranscript = '';
-                let interimTranscript = '';
-                
-                for (let i = event.resultIndex; i < event.results.length; i++) {
-                    const result = event.results[i];
-                    const transcript = result[0].transcript;
-                    
-                    if (result.isFinal) {
-                        finalTranscript += transcript;
-                        if (answerInput.value) {
-                            answerInput.value += ' ' + finalTranscript;
-                        } else {
-                            answerInput.value = finalTranscript;
-                        }
-                        outputDiv.textContent = "Đã nhận: " + answerInput.value;
-                    } else {
-                        interimTranscript += transcript;
-                    }
-                }
-                
-                if (interimTranscript && !finalTranscript) {
-                    outputDiv.textContent = "Đang nghe: " + interimTranscript;
-                }
-                
-                if (recognitionTimeout) {
-                    clearTimeout(recognitionTimeout);
-                }
-                recognitionTimeout = setTimeout(() => {
-                    stopVoiceRecognition();
-                }, 1500);
-            };
-        } catch (error) {
-            console.error("Error setting up voice recognition:", error);
-            alert("Trình duyệt của bạn không hỗ trợ nhận diện giọng nói. Vui lòng sử dụng Chrome hoặc Edge.");
-        }
-    }
-}
-
-function startVoiceRecognition() {
-    setupVoiceRecognition();
-    if (recognition) {
-        try {
-            isListening = true;
-            recognition.start();
-        } catch (error) {
-            console.error("Error starting voice recognition:", error);
-        }
-    }
-}
-
-function stopVoiceRecognition() {
-    if (recognition) {
-        isListening = false;
-        recognition.stop();
-        
-        if (interimResult && !answerInput.value) {
-            answerInput.value = interimResult;
-            outputDiv.textContent = "Đã nhận: " + interimResult;
-        }
-        
-        interimResult = "";
-        voiceButton.classList.remove('recording');
-        
-        if (recognitionTimeout) {
-            clearTimeout(recognitionTimeout);
-            recognitionTimeout = null;
-        }
-    }
-}
-
-function toggleVoiceRecognition() {
-    if (isListening) {
-        stopVoiceRecognition();
-    } else {
-        startVoiceRecognition();
-    }
-}
-
-// Initialize voice button
-if (voiceButton) {
-    voiceButton.innerHTML = '<i class="fas fa-microphone"></i>';
-    voiceButton.title = "Nhấn để bắt đầu nhận diện giọng nói (F3)";
-    voiceButton.addEventListener('click', toggleVoiceRecognition);
-    
-    // F3 keyboard shortcut
-    document.addEventListener('keydown', (e) => {
-        if (e.key === 'F3') {
-            e.preventDefault();
-            toggleVoiceRecognition();
-        }
-    });
-}
-
-// Save and load state from localStorage
+// Save/load learning state from localStorage
 function saveState() {
     const state = {
         vocabulary,
@@ -355,10 +41,10 @@ function saveState() {
         wrongWords,
         currentCycle,
         totalCycles,
-        inputText: vocabularyInput.value,
-        autoSpeakEnabled
+        inputText: vocabularyInput.value
     };
     localStorage.setItem('vocabularyLearnerState', JSON.stringify(state));
+    console.log("State saved successfully:", state);
 }
 
 function loadState() {
@@ -372,25 +58,43 @@ function loadState() {
             currentCycle = state.currentCycle || 1;
             totalCycles = state.totalCycles || 2;
             
-            if (state.autoSpeakEnabled !== undefined) {
-                autoSpeakEnabled = state.autoSpeakEnabled;
-                if (autoSpeakToggle) {
-                    autoSpeakToggle.checked = autoSpeakEnabled;
-                }
-            }
-            
+            // Restore input text
             if (state.inputText) {
                 vocabularyInput.value = state.inputText;
             }
             
+            console.log("State loaded successfully:", state);
             return vocabulary.length > 0;
         } catch (e) {
-            console.error("Error loading state:", e);
+            console.error("Error loading saved state:", e);
             return false;
         }
     }
     return false;
 }
+
+// Check for saved state on page load
+window.addEventListener('load', () => {
+    if (loadState()) {
+        console.log("Found saved learning state");
+        
+        // Make sure UI is updated
+        updateProgressUI();
+        showCurrentWord();
+        
+        // Offer to continue from saved state
+        if (confirm('Phát hiện dữ liệu học tập đã lưu. Bạn có muốn tiếp tục không?')) {
+            // Enable learning tab
+            document.querySelector('[data-tab="learning"]').disabled = false;
+            document.querySelector('[data-tab="learning"]').click();
+            
+            // Set focus to answer input
+            answerInput.focus();
+        }
+    } else {
+        console.log("No saved learning state found");
+    }
+});
 
 // Tab switching
 tabs.forEach(tab => {
@@ -407,81 +111,20 @@ tabs.forEach(tab => {
     });
 });
 
-// Add a beforeunload event handler to warn user before leaving
-window.addEventListener('beforeunload', (event) => {
-    // If there's an active learning session, show a confirmation dialog
-    if (vocabulary.length > 0 && currentCycle <= totalCycles) {
-        event.preventDefault();
-        event.returnValue = "Bạn có muốn rời khỏi trang? Tiến độ học có thể bị mất.";
-        return event.returnValue;
-    }
-});
-
-// Handle finishing a learning session
-async function finishLearning() {
-    // Stop active features
-    if (isListening) stopVoiceRecognition();
-    speechSynthesis.cancel();
-
-    // Exit fullscreen if active
-    if (document.fullscreenElement) {
-        try {
-            await document.exitFullscreen();
-        } catch (error) {
-            console.error("Error exiting fullscreen:", error);
-        }
-    }
-
-    // Reset UI
-    answerInput.value = '';
-    resultDisplay.classList.add('hidden');
-    meaningDisplay.textContent = '';
-    progressText.textContent = '0/0';
-    progressBarFill.style.width = '0%';
-    cycleText.textContent = `Chu kỳ: 0/${totalCycles}`;
-    wrongWordsTextarea.value = '';
-
-    // Handle wrong words
-    if (wrongWords.length > 0) {
-        document.querySelector('[data-tab="wrong"]').disabled = false;
-        document.querySelector('[data-tab="wrong"]').click();
-        wrongWordsTextarea.value = wrongWords.map(word =>
-            `${word.kanji}=${word.hiragana}=${word.meaning}`
-        ).join('\n');
-        
-        // Show congratulations with wrong word count
-        alert(`Hoàn thành! Bạn có ${wrongWords.length} từ cần ôn tập lại.`);
-    } else {
-        alert('Chúc mừng! Bạn đã học tất cả từ vựng đúng!');
-        document.querySelector('[data-tab="input"]').click();
-    }
-
-    // Clear saved state
-    localStorage.removeItem('vocabularyLearnerState');
-}
-
-// Start learning button handler
+// Start learning button
 startLearningBtn.addEventListener('click', () => {
-    // Reset UI
-    answerInput.value = '';
-    resultDisplay.classList.add('hidden');
-    meaningDisplay.textContent = '';
-    wrongWordsTextarea.value = '';
-
-    // Validate input
     const inputText = vocabularyInput.value.trim();
     if (!inputText) {
         alert('Vui lòng nhập danh sách từ vựng!');
         return;
     }
 
-    // Process vocabulary
     const lines = inputText.split('\n');
     vocabulary = [];
-    
+
     for (const line of lines) {
         if (!line.trim()) continue;
-        
+
         const parts = line.trim().split('=');
         if (parts.length < 2) {
             alert(`Định dạng không hợp lệ: ${line}\nVui lòng sử dụng định dạng: Kanji=Hiragana=Nghĩa`);
@@ -500,123 +143,191 @@ startLearningBtn.addEventListener('click', () => {
         return;
     }
 
-    // Setup learning session
-    totalCycles = Math.max(1, parseInt(cycleCountInput.value) || 2);
-    if (shuffleCheckbox.checked) shuffleArray(vocabulary);
+    // Get cycle count
+    totalCycles = parseInt(cycleCountInput.value) || 2;
+    if (totalCycles < 1) totalCycles = 1;
 
+    // Shuffle if needed
+    if (shuffleCheckbox.checked) {
+        shuffleArray(vocabulary);
+    }
+
+    // Reset learning state
     currentIndex = 0;
     currentCycle = 1;
     wrongWords = [];
     isChecking = false;
 
+    // Save state
     saveState();
 
-    // Start session
+    // Switch to learning tab
     document.querySelector('[data-tab="learning"]').disabled = false;
     document.querySelector('[data-tab="learning"]').click();
+
+    // Update UI
     updateProgressUI();
     showCurrentWord();
+
+    // Set focus to answer input
     answerInput.focus();
 
-    // Enter fullscreen
-    try {
-        document.documentElement.requestFullscreen().catch(console.error);
-    } catch (error) {
-        console.error("Error requesting fullscreen:", error);
-        // Continue even if fullscreen fails
-    }
+    // Enter fullscreen mode
+    document.documentElement.requestFullscreen().catch(err => {
+        console.log(`Error attempting to enable fullscreen mode: ${err.message}`);
+    });
 });
 
-// Copy and relearn wrong words button
+// Check answer button
+checkAnswerBtn.addEventListener('click', checkAnswer);
+
+// Skip word button
+skipWordBtn.addEventListener('click', skipWord);
+
+// Restart learning button
+restartLearningBtn.addEventListener('click', () => {
+    currentIndex = 0;
+    currentCycle = 1;
+    wrongWords = [];
+    isChecking = false;
+
+    // Save state
+    saveState();
+
+    updateProgressUI();
+    showCurrentWord();
+    resultDisplay.classList.add('hidden');
+    meaningDisplay.textContent = '';
+    answerInput.value = '';
+    answerInput.focus();
+});
+
+// Copy and relearn button
 copyAndRelearnBtn.addEventListener('click', () => {
-    if (wrongWords.length === 0) {
-        alert('Không có từ nào để học lại!');
-        return;
-    }
+    if (wrongWords.length === 0) return;
 
     const wrongWordsText = wrongWords.map(word =>
         `${word.kanji}=${word.hiragana}=${word.meaning}`
     ).join('\n');
 
-    // Reset UI and state
     vocabularyInput.value = wrongWordsText;
-    answerInput.value = '';
-    resultDisplay.classList.add('hidden');
-    meaningDisplay.textContent = '';
-    
-    // Reset state variables
-    currentIndex = 0;
-    currentCycle = 1;
-    wrongWords = [];
-    isChecking = false;
-    
-    // Reset API cache
-    Object.keys(apiCache).forEach(key => {
-        delete apiCache[key];
-    });
-    
-    saveState();
 
-    // Switch tab and focus
+    // Switch to input tab
     document.querySelector('[data-tab="input"]').click();
-    vocabularyInput.focus();
-    alert('Đã chuẩn bị danh sách từ sai để học lại. Nhấn "Bắt đầu học" khi sẵn sàng!');
+
+    // Focus on start button
+    startLearningBtn.focus();
 });
 
-// Improved check answer function
+// Answer input enter key
+answerInput.addEventListener('keydown', (e) => {
+    if (e.key === 'Enter') {
+        e.preventDefault();
+        checkAnswer();
+    }
+});
+
+// Global keyboard shortcuts
+document.addEventListener('keydown', (e) => {
+    // Only process when in learning mode
+    const learningTab = document.getElementById('learning');
+    if (!learningTab.classList.contains('active')) return;
+
+    if (e.key === 's' && e.ctrlKey) {
+        // Ctrl+S - Skip word
+        e.preventDefault();
+        skipWord();
+    } else if (e.key === 'Escape') {
+        // ESC - Show exit dialog
+        e.preventDefault();
+        if (confirm('Bạn có muốn thoát chế độ học không?')) {
+            document.querySelector('[data-tab="input"]').click();
+            if (document.fullscreenElement) {
+                document.exitFullscreen();
+            }
+        }
+    } else if (e.key === 'F11') {
+        // F11 - Toggle fullscreen
+        e.preventDefault();
+        if (document.fullscreenElement) {
+            document.exitFullscreen();
+        } else {
+            document.documentElement.requestFullscreen();
+        }
+    }
+});
+
+// Function to check answer
 async function checkAnswer() {
-    const now = Date.now();
-    if (isChecking || now - lastCheckTime < DEBOUNCE_TIME) return;
-    lastCheckTime = now;
-    
+    if (isChecking || currentIndex >= vocabulary.length) return;
+
     isChecking = true;
-    disableButtons();
-    
     const currentWord = vocabulary[currentIndex];
     const userAnswer = answerInput.value.trim();
-    
-    try {
-        showCheckingUI();
+
+    // Add loading state
+    resultDisplay.textContent = "Đang kiểm tra...";
+    resultDisplay.className = "result";
+    resultDisplay.classList.remove("hidden");
+
+    // Call AI to check
+    const isCorrect = await checkWithAI(userAnswer, currentWord.hiragana);
+
+    if (isCorrect) {
+        resultDisplay.textContent = "✓ Chính xác!";
+        resultDisplay.className = "result correct";
         
-        if (autoSpeakEnabled) {
-            speakWord(currentWord.hiragana);
+        // Show meaning for correct answer too
+        if (currentWord.meaning) {
+            meaningDisplay.textContent = currentWord.meaning;
         }
         
-        if (userAnswer === "") {
-            await handleIncorrectAnswer(currentWord);
-            return;
+        // Move to next word after success
+        setTimeout(() => {
+            moveToNextWord();
+            isChecking = false;
+        }, 1500);
+    } else {
+        resultDisplay.textContent = `✗ Sai rồi! Đáp án đúng là: ${currentWord.hiragana}`;
+        resultDisplay.className = "result incorrect";
+        
+        // Add to wrong words list
+        if (!wrongWords.some(word => word.kanji === currentWord.kanji)) {
+            wrongWords.push(currentWord);
         }
         
-        const isCorrect = await checkAnswerWithFallback(userAnswer, currentWord);
-        
-        if (isCorrect) {
-            await handleCorrectAnswer(currentWord);
-        } else {
-            await handleIncorrectAnswer(currentWord);
+        // Always show meaning for incorrect answers
+        if (currentWord.meaning) {
+            meaningDisplay.textContent = currentWord.meaning;
         }
-    } catch (error) {
-        console.error("Unexpected error in checkAnswer:", error);
-        resultDisplay.textContent = "Lỗi hệ thống! Vui lòng thử lại";
-        resultDisplay.className = "result error";
-    } finally {
+        
+        // Clear the answer input to allow the user to try again
+        // but keep the hints visible
+        answerInput.value = '';
+        answerInput.focus();
+        
+        // Release the checking lock but keep displays visible
         isChecking = false;
-        enableButtons();
-        saveState();
     }
+    
+    // Save state after checking
+    saveState();
 }
 
-// Improved API checking function with key rotation and better error handling
+// Improved AI checking function with better handling of alternative inputs
 async function checkWithAI(userInput, correctHiragana) {
     const cacheKey = `${userInput}:${correctHiragana}`;
 
-    // Check cache first
+    // Check cache
     if (apiCache[cacheKey] !== undefined) {
         return apiCache[cacheKey];
     }
     
-    // Process input (handle romaji)
+    // Handle romaji/latin alphabet input
     let processedInput = userInput;
     if (/^[a-zA-Z0-9\s,.?!;:'"()\-]+$/.test(userInput)) {
+        // If input is only Latin characters, consider it romaji
+        // This is just for checking - we'll still validate with AI
         console.log("Latin alphabet input detected, treating as romaji");
     }
 
@@ -639,193 +350,101 @@ Expected answer: ${correctHiragana}
 Considering all the above rules, is the student's answer correct? Output only 'true' or 'false'.
 `;
 
-    // Try up to 3 times with different API keys
-    let attempts = 0;
-    const maxAttempts = apiKeys.length;
-    
-    while (attempts < maxAttempts) {
-        try {
-            // Use the current API key
-            const currentApiKey = apiKeys[currentApiKeyIndex];
-            
-            // Add timeout to prevent hanging requests
-            const controller = new AbortController();
-            const timeoutId = setTimeout(() => controller.abort(), 10000); // 10 second timeout
-            
-            const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash-latest:generateContent?key=${currentApiKey}`, {
-                method: "POST",
-                headers: { "Content-Type": "application/json" },
-                body: JSON.stringify({
-                    contents: [{ parts: [{ text: prompt }] }]
-                }),
-                signal: controller.signal
-            });
-            
-            clearTimeout(timeoutId);
-
-            // Handle non-200 responses
-            if (!response.ok) {
-                const errorText = await response.text();
-                console.error(`API error (${response.status}): ${errorText}`);
-                throw new Error(`API error: ${response.status}`);
-            }
-
-            const data = await response.json();
-
-            // Check for API key error or quota exceeded
-            if (data.error && (data.error.code === 403 || data.error.message?.includes('quota'))) {
-                console.warn(`API key ${currentApiKeyIndex + 1} quota exceeded, trying next key...`);
-                currentApiKeyIndex = (currentApiKeyIndex + 1) % apiKeys.length;
-                attempts++;
-                continue;
-            }
-
-            // Process valid response
-            if (data && data.candidates && data.candidates[0]?.content) {
-                const resultText = data.candidates[0].content.parts[0].text.trim().toLowerCase();
-                const isCorrect = resultText === "true";
-                apiCache[cacheKey] = isCorrect;
-                return isCorrect;
-            } else {
-                console.error("Invalid response from API:", data);
-                throw new Error("Invalid API response");
-            }
-        } catch (error) {
-            console.error(`Error with API key ${currentApiKeyIndex + 1}:`, error);
-            currentApiKeyIndex = (currentApiKeyIndex + 1) % apiKeys.length;
-            attempts++;
-            
-            // If it's an abort error (timeout), log it specifically
-            if (error.name === 'AbortError') {
-                console.error("Request timed out");
-            }
-        }
-    }
-    
-    // All API attempts failed, fall back to direct comparison
-    console.warn("All API attempts failed, using direct comparison");
-    const normalizedInput = processedInput.toLowerCase().replace(/\s+/g, '');
-    const normalizedCorrect = correctHiragana.toLowerCase().replace(/\s+/g, '');
-    return normalizedInput === normalizedCorrect;
-}
-
-async function handleCorrectAnswer(currentWord) {
-    resultDisplay.textContent = "✓ Chính xác!";
-    resultDisplay.className = "result correct";
-    meaningDisplay.textContent = currentWord.meaning || "";
-
-    // Hiệu ứng visual
-    const kanjiText = document.getElementById('kanjiText');
-    if (kanjiText) {
-        kanjiText.classList.add('correct-animation');
-        await new Promise(r => setTimeout(r, 800));
-        kanjiText.classList.remove('correct-animation');
-    }
-
-    // Chờ trước khi chuyển từ
-    await new Promise(resolve => setTimeout(resolve, 200));
-    await moveToNextWord();
-}
-
-async function handleIncorrectAnswer(currentWord) {
-    resultDisplay.textContent = `✗ Sai rồi! Đáp án đúng là: ${currentWord.hiragana}`;
-    resultDisplay.className = "result incorrect";
-    resultDisplay.classList.remove("hidden");
-    meaningDisplay.textContent = currentWord.meaning || "";
-    
-    // Thêm vào danh sách từ sai nếu chưa có
-    if (!wrongWords.some(word => word.kanji === currentWord.kanji)) {
-        wrongWords.push(currentWord);
-    }
-    
-    // Reset input
-    answerInput.value = '';
-    interimResult = "";
-    
-    // Focus lại ô nhập liệu
-    answerInput.focus();
-}
-
-// Improved move to next word function with better error handling
-async function moveToNextWord() {
     try {
-        interimResult = "";
-        currentIndex++;
+        // Use API key from array (can be rotated if needed)
+        const currentApiKey = apiKeys[0]; // Logic for rotating API keys could be added
 
-        if (currentIndex >= vocabulary.length) {
-            currentIndex = 0;
-            currentCycle++;
+        const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash-latest:generateContent?key=${currentApiKey}`, {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({
+                contents: [{ parts: [{ text: prompt }] }]
+            })
+        });
+
+        const data = await response.json();
+
+        // Process result from API
+        if (data && data.candidates && data.candidates[0].content) {
+            const resultText = data.candidates[0].content.parts[0].text.trim().toLowerCase();
+            const isCorrect = resultText === "true";
+            apiCache[cacheKey] = isCorrect;
+            return isCorrect;
+        } else {
+            console.error("Invalid response from API:", data);
             
-            if (currentCycle > totalCycles) {
-                await finishLearning();
-                return;
-            }
-            
-            // Reshuffle for the next cycle if shuffle is checked
-            if (shuffleCheckbox.checked) {
-                shuffleArray(vocabulary);
-            }
+            // Fallback to direct comparison if API fails
+            const normalizedInput = processedInput.toLowerCase().replace(/\s+/g, '');
+            const normalizedCorrect = correctHiragana.toLowerCase().replace(/\s+/g, '');
+            return normalizedInput === normalizedCorrect;
         }
-
-        resultDisplay.classList.add('hidden');
-        meaningDisplay.textContent = '';
-        answerInput.value = '';
-        updateProgressUI();
-        showCurrentWord();
-        answerInput.focus();
     } catch (error) {
-        console.error("Error in moveToNextWord:", error);
-    }
-}
-
-
-// Các hàm helper mới
-function disableButtons() {
-    checkAnswerBtn.disabled = true;
-    skipWordBtn.disabled = true;
-}
-
-function enableButtons() {
-    checkAnswerBtn.disabled = false;
-    skipWordBtn.disabled = false;
-}
-
-function showCheckingUI() {
-    resultDisplay.textContent = "Đang kiểm tra...";
-    resultDisplay.className = "result checking";
-    resultDisplay.classList.remove("hidden");
-    meaningDisplay.textContent = "";
-}
-
-async function checkAnswerWithFallback(userAnswer, currentWord) {
-    try {
-        return await checkWithAI(userAnswer, currentWord.hiragana);
-    } catch (error) {
-        console.error("API check failed, using fallback:", error);
-        const normalizedInput = userAnswer.toLowerCase().replace(/\s+/g, '');
-        const normalizedCorrect = currentWord.hiragana.toLowerCase().replace(/\s+/g, '');
+        console.error("Error calling Gemini API:", error);
+        
+        // Fallback to direct comparison if API fails
+        const normalizedInput = processedInput.toLowerCase().replace(/\s+/g, '');
+        const normalizedCorrect = correctHiragana.toLowerCase().replace(/\s+/g, '');
         return normalizedInput === normalizedCorrect;
     }
 }
 
+// Function to skip word
+function skipWord() {
+    if (isChecking) return;
 
-// Helper functions
-function shuffleArray(array) {
-    for (let i = array.length - 1; i > 0; i--) {
-        const j = Math.floor(Math.random() * (i + 1));
-        [array[i], array[j]] = [array[j], array[i]];
+    const currentWord = vocabulary[currentIndex];
+
+    // Add to wrong words list
+    if (!wrongWords.some(word => word.kanji === currentWord.kanji)) {
+        wrongWords.push(currentWord);
     }
+
+    moveToNextWord();
+    
+    // Save state after skipping
+    saveState();
 }
 
+// Function to move to next word
+function moveToNextWord() {
+    currentIndex++;
+
+    // Check if we need to move to next cycle or finish
+    if (currentIndex >= vocabulary.length) {
+        currentIndex = 0;
+        currentCycle++;
+
+        if (currentCycle > totalCycles) {
+            // Learning completed
+            finishLearning();
+            return;
+        }
+    }
+
+    // Reset UI for next word
+    resultDisplay.classList.add('hidden');
+    meaningDisplay.textContent = '';
+    answerInput.value = '';
+
+    // Update progress and show next word
+    updateProgressUI();
+    showCurrentWord();
+    answerInput.focus();
+    
+    // Save state after moving
+    saveState();
+}
+
+// Function to show current word
 function showCurrentWord() {
     if (currentIndex < vocabulary.length) {
         kanjiDisplay.textContent = vocabulary[currentIndex].kanji;
-        answerInput.focus();
     } else {
         kanjiDisplay.textContent = '';
     }
 }
 
+// Function to update progress UI
 function updateProgressUI() {
     const total = vocabulary.length;
     const current = currentIndex + 1;
@@ -836,69 +455,37 @@ function updateProgressUI() {
     progressBarFill.style.width = `${percentage}%`;
 }
 
-// Add clear vocabulary button handler if it exists
-if (clearVocabularyBtn) {
-    clearVocabularyBtn.addEventListener('click', () => {
-        if (confirm('Bạn có chắc muốn xóa tất cả từ vựng đã nhập?')) {
-            vocabularyInput.value = '';
-            vocabularyInput.focus();
-        }
-    });
+// Function to finish learning
+function finishLearning() {
+    if (wrongWords.length > 0) {
+        // Show wrong words tab
+        const wrongWordsTab = document.querySelector('[data-tab="wrong"]');
+        wrongWordsTab.disabled = false;
+        wrongWordsTab.click();
+
+        // Fill wrong words textarea
+        wrongWordsTextarea.value = wrongWords.map(word =>
+            `${word.kanji}=${word.hiragana}=${word.meaning}`
+        ).join('\n');
+    } else {
+        // No wrong words, show congratulations
+        alert('Chúc mừng! Bạn đã học tất cả từ vựng đúng!');
+        document.querySelector('[data-tab="input"]').click();
+    }
+
+    // Exit fullscreen
+    if (document.fullscreenElement) {
+        document.exitFullscreen();
+    }
+    
+    // Clear saved state as we've completed
+    localStorage.removeItem('vocabularyLearnerState');
 }
 
-// Initialize when page loads
-window.addEventListener('load', () => {
-    // Load voices for speech synthesis
-    if (speechSynthesis) {
-        // Some browsers need to wait for voices to load
-        if (speechSynthesis.getVoices().length === 0) {
-            speechSynthesis.addEventListener('voiceschanged', () => {
-                console.log("Voices loaded:", speechSynthesis.getVoices().length);
-            });
-        }
+// Helper function to shuffle array
+function shuffleArray(array) {
+    for (let i = array.length - 1; i > 0; i--) {
+        const j = Math.floor(Math.random() * (i + 1));
+        [array[i], array[j]] = [array[j], array[i]];
     }
-    
-    // Load saved state
-    if (loadState()) {
-        updateProgressUI();
-        showCurrentWord();
-        
-        if (confirm('Phát hiện dữ liệu học tập đã lưu. Bạn có muốn tiếp tục không?')) {
-            document.querySelector('[data-tab="learning"]').disabled = false;
-            document.querySelector('[data-tab="learning"]').click();
-            answerInput.focus();
-        }
-    }
-    
-    // Check if browser supports speech synthesis
-    if (!speechSynthesis) {
-        console.warn("Speech synthesis not supported");
-        if (speakButton) speakButton.disabled = true;
-        if (speakCurrentWord) speakCurrentWord.disabled = true;
-        if (autoSpeakToggle) {
-            autoSpeakToggle.disabled = true;
-            autoSpeakToggle.checked = false;
-            autoSpeakEnabled = false;
-        }
-    }
-    
-    // Add fullscreen change event listener
-    document.addEventListener('fullscreenchange', () => {
-        if (!document.fullscreenElement && vocabulary.length > 0 && currentCycle <= totalCycles) {
-            // User manually exited fullscreen during learning
-            console.log("User exited fullscreen during learning session");
-        }
-    });
-});
-
-// Handle page unload
-window.addEventListener('beforeunload', () => {
-    if (recognition && isListening) {
-        stopVoiceRecognition();
-    }
-    
-    // Cancel any ongoing speech
-    if (speechSynthesis) {
-        speechSynthesis.cancel();
-    }
-});
+}
