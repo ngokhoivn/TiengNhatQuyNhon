@@ -787,19 +787,24 @@
                 justify-content: center;
             }
 
-            .vietnamese-text {
-                font-size: 1.1em;
-            }
+			.sentence-example {
+				flex-direction: row; /* Giữ nguyên hàng ngang */
+				align-items: center; /* Căn giữa theo chiều dọc */
+				gap: 8px; /* Giảm khoảng cách */
+				padding: 8px; /* Giảm padding */
+			}
 
-            .sentence-example {
-                flex-direction: column;
-                gap: 12px;
-                padding: 12px;
-            }
+			.nav-arrow {
+				position: static; /* Hoặc absolute nếu muốn dính sát biên */
+				flex-shrink: 0; /* Ngăn không bị thu nhỏ */
+				width: 32px; /* Thu nhỏ kích thước */
+				height: 32px;
+			}
 
-            .nav-arrow {
-                position: relative;
-            }
+			.vietnamese-text {
+				font-size: 1em; /* Giảm nhẹ font chữ */
+				padding: 0 4px; /* Giảm padding */
+			}
 
             .word-bank, .sentence-builder {
                 min-height: 100px;
