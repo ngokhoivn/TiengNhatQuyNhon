@@ -755,15 +755,25 @@
                 font-size: 1.5em;
             }
 
-            .top-bar {
-                flex-direction: column;
-                gap: 8px;
-            }
+			.top-bar {
+				flex-direction: row; /* Thay đổi từ column sang row */
+				align-items: center; /* Căn giữa theo chiều dọc */
+				gap: 8px; /* Khoảng cách giữa các phần tử */
+				flex-wrap: wrap; /* Cho phép xuống dòng nếu không đủ chỗ */
+			}
 
-            .progress-container {
-                width: 100%;
-            }
-
+			.progress-container {
+				flex: 1; /* Chiếm phần không gian còn lại */
+				min-width: 200px; /* Đảm bảo không bị ép quá nhỏ */
+			}
+			
+			.btn-home {
+				padding: 8px 12px; /* Giảm padding cho gọn */
+				font-size: 0.8em; /* Giảm cỡ chữ */
+				white-space: nowrap; /* Ngăn chữ bị xuống dòng */
+				flex-shrink: 0; /* Ngăn nút bị co lại */
+			}
+			
             .game-content {
                 flex-direction: column;
             }
