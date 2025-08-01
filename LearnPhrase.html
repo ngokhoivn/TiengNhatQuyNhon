@@ -777,15 +777,18 @@
                 padding: 6px 10px;
             }
             
-            .controls {
-                flex-direction: column;
-                align-items: center;
-            }
-            
-            .btn {
-                width: 200px;
-                justify-content: center;
-            }
+			.controls {
+				flex-direction: row; /* Thay đổi từ column sang row */
+				justify-content: center; /* Căn giữa theo chiều ngang */
+				gap: 12px; /* Khoảng cách giữa các nút */
+				flex-wrap: wrap; /* Cho phép xuống dòng nếu không đủ chỗ */
+			}
+			
+			.btn {
+				width: auto; /* Bỏ width cố định 200px */
+				min-width: 120px; /* Độ rộng tối thiểu */
+				padding: 10px 16px; /* Điều chỉnh padding cho vừa vặn */
+			}
 
 			.sentence-example {
 				flex-direction: row; /* Giữ nguyên hàng ngang */
