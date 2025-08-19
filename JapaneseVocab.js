@@ -5,13 +5,6 @@ let wrongWords = [];
 let currentCycle = 1;
 let totalCycles = 2;
 let isChecking = false;
-const apiCache = {};
-// API keys declaration
-const apiKeys = [
-    'AIzaSyDjgTk4uZQUCpFH5Zt8ZgP2CW-jhmkLv8o',
-    'AIzaSyDaROReiR48rjfavf8Lk6XvphC6QxKPZo4',
-    'AIzaSyD-LQ7BMIl85o0Tq3LogG2rBmtYjkOpogU'
-];
 
 // Element references
 const tabs = document.querySelectorAll('.tab');
@@ -44,7 +37,6 @@ function saveState() {
         inputText: vocabularyInput.value
     };
     localStorage.setItem('vocabularyLearnerState', JSON.stringify(state));
-    console.log("State saved successfully:", state);
 }
 
 function loadState() {
@@ -58,12 +50,10 @@ function loadState() {
             currentCycle = state.currentCycle || 1;
             totalCycles = state.totalCycles || 2;
             
-            // Restore input text
             if (state.inputText) {
                 vocabularyInput.value = state.inputText;
             }
             
-            console.log("State loaded successfully:", state);
             return vocabulary.length > 0;
         } catch (e) {
             console.error("Error loading saved state:", e);
@@ -76,23 +66,11 @@ function loadState() {
 // Check for saved state on page load
 window.addEventListener('load', () => {
     if (loadState()) {
-        console.log("Found saved learning state");
-        
-        // Make sure UI is updated
-        updateProgressUI();
-        showCurrentWord();
-        
-        // Offer to continue from saved state
         if (confirm('Phát hiện dữ liệu học tập đã lưu. Bạn có muốn tiếp tục không?')) {
-            // Enable learning tab
             document.querySelector('[data-tab="learning"]').disabled = false;
             document.querySelector('[data-tab="learning"]').click();
-            
-            // Set focus to answer input
             answerInput.focus();
         }
-    } else {
-        console.log("No saved learning state found");
     }
 });
 
@@ -174,7 +152,7 @@ startLearningBtn.addEventListener('click', () => {
 
     // Enter fullscreen mode
     document.documentElement.requestFullscreen().catch(err => {
-        console.log(`Error attempting to enable fullscreen mode: ${err.message}`);
+        console.log(`Error attempting to enable fullscreen: ${err.message}`);
     });
 });
 
@@ -191,9 +169,7 @@ restartLearningBtn.addEventListener('click', () => {
     wrongWords = [];
     isChecking = false;
 
-    // Save state
     saveState();
-
     updateProgressUI();
     showCurrentWord();
     resultDisplay.classList.add('hidden');
@@ -211,11 +187,7 @@ copyAndRelearnBtn.addEventListener('click', () => {
     ).join('\n');
 
     vocabularyInput.value = wrongWordsText;
-
-    // Switch to input tab
     document.querySelector('[data-tab="input"]').click();
-
-    // Focus on start button
     startLearningBtn.focus();
 });
 
@@ -227,18 +199,15 @@ answerInput.addEventListener('keydown', (e) => {
     }
 });
 
-// Global keyboard shortcuts
+// Keyboard shortcuts
 document.addEventListener('keydown', (e) => {
-    // Only process when in learning mode
     const learningTab = document.getElementById('learning');
     if (!learningTab.classList.contains('active')) return;
 
     if (e.key === 's' && e.ctrlKey) {
-        // Ctrl+S - Skip word
         e.preventDefault();
         skipWord();
     } else if (e.key === 'Escape') {
-        // ESC - Show exit dialog
         e.preventDefault();
         if (confirm('Bạn có muốn thoát chế độ học không?')) {
             document.querySelector('[data-tab="input"]').click();
@@ -247,7 +216,6 @@ document.addEventListener('keydown', (e) => {
             }
         }
     } else if (e.key === 'F11') {
-        // F11 - Toggle fullscreen
         e.preventDefault();
         if (document.fullscreenElement) {
             document.exitFullscreen();
@@ -257,135 +225,48 @@ document.addEventListener('keydown', (e) => {
     }
 });
 
-// Function to check answer
-async function checkAnswer() {
+// Function to check answer (OFFLINE VERSION)
+function checkAnswer() {
     if (isChecking || currentIndex >= vocabulary.length) return;
 
     isChecking = true;
     const currentWord = vocabulary[currentIndex];
     const userAnswer = answerInput.value.trim();
 
-    // Add loading state
-    resultDisplay.textContent = "Đang kiểm tra...";
-    resultDisplay.className = "result";
-    resultDisplay.classList.remove("hidden");
+    // Simple normalization for comparison
+    const normalizedUserAnswer = userAnswer.toLowerCase().replace(/\s+/g, '');
+    const normalizedCorrect = currentWord.hiragana.toLowerCase().replace(/\s+/g, '');
 
-    // Call AI to check
-    const isCorrect = await checkWithAI(userAnswer, currentWord.hiragana);
-
-    if (isCorrect) {
+    if (normalizedUserAnswer === normalizedCorrect) {
         resultDisplay.textContent = "✓ Chính xác!";
         resultDisplay.className = "result correct";
         
-        // Show meaning for correct answer too
         if (currentWord.meaning) {
             meaningDisplay.textContent = currentWord.meaning;
         }
         
-        // Move to next word after success
         setTimeout(() => {
             moveToNextWord();
             isChecking = false;
-        }, 1500);
+        }, 800);
     } else {
         resultDisplay.textContent = `✗ Sai rồi! Đáp án đúng là: ${currentWord.hiragana}`;
         resultDisplay.className = "result incorrect";
         
-        // Add to wrong words list
         if (!wrongWords.some(word => word.kanji === currentWord.kanji)) {
             wrongWords.push(currentWord);
         }
         
-        // Always show meaning for incorrect answers
         if (currentWord.meaning) {
             meaningDisplay.textContent = currentWord.meaning;
         }
         
-        // Clear the answer input to allow the user to try again
-        // but keep the hints visible
         answerInput.value = '';
         answerInput.focus();
-        
-        // Release the checking lock but keep displays visible
         isChecking = false;
     }
     
-    // Save state after checking
     saveState();
-}
-
-// Improved AI checking function with better handling of alternative inputs
-async function checkWithAI(userInput, correctHiragana) {
-    const cacheKey = `${userInput}:${correctHiragana}`;
-
-    // Check cache
-    if (apiCache[cacheKey] !== undefined) {
-        return apiCache[cacheKey];
-    }
-    
-    // Handle romaji/latin alphabet input
-    let processedInput = userInput;
-    if (/^[a-zA-Z0-9\s,.?!;:'"()\-]+$/.test(userInput)) {
-        // If input is only Latin characters, consider it romaji
-        // This is just for checking - we'll still validate with AI
-        console.log("Latin alphabet input detected, treating as romaji");
-    }
-
-    const prompt = `
-Evaluate Japanese answer flexibility. Act as a Japanese language teacher evaluating student responses.
-
-Rules for evaluation:
-1. ACCEPT different ways of expressing the same meaning in Japanese
-2. ACCEPT both hiragana and katakana representations of the same sound
-3. ACCEPT romaji (Latin alphabet) input that correctly represents the Japanese sounds
-4. ACCEPT particle variations where appropriate (は/wa, へ/e, を/o)
-5. ACCEPT answers with different word order if grammatically correct
-6. For sentences, focus on meaning equivalence rather than exact character matching
-7. For vocabulary words, be stricter about pronunciation but accept alternative forms
-
-Compare:
-Student answer: ${processedInput}  
-Expected answer: ${correctHiragana}
-
-Considering all the above rules, is the student's answer correct? Output only 'true' or 'false'.
-`;
-
-    try {
-        // Use API key from array (can be rotated if needed)
-        const currentApiKey = apiKeys[0]; // Logic for rotating API keys could be added
-
-        const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash-latest:generateContent?key=${currentApiKey}`, {
-            method: "POST",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({
-                contents: [{ parts: [{ text: prompt }] }]
-            })
-        });
-
-        const data = await response.json();
-
-        // Process result from API
-        if (data && data.candidates && data.candidates[0].content) {
-            const resultText = data.candidates[0].content.parts[0].text.trim().toLowerCase();
-            const isCorrect = resultText === "true";
-            apiCache[cacheKey] = isCorrect;
-            return isCorrect;
-        } else {
-            console.error("Invalid response from API:", data);
-            
-            // Fallback to direct comparison if API fails
-            const normalizedInput = processedInput.toLowerCase().replace(/\s+/g, '');
-            const normalizedCorrect = correctHiragana.toLowerCase().replace(/\s+/g, '');
-            return normalizedInput === normalizedCorrect;
-        }
-    } catch (error) {
-        console.error("Error calling Gemini API:", error);
-        
-        // Fallback to direct comparison if API fails
-        const normalizedInput = processedInput.toLowerCase().replace(/\s+/g, '');
-        const normalizedCorrect = correctHiragana.toLowerCase().replace(/\s+/g, '');
-        return normalizedInput === normalizedCorrect;
-    }
 }
 
 // Function to skip word
@@ -393,15 +274,11 @@ function skipWord() {
     if (isChecking) return;
 
     const currentWord = vocabulary[currentIndex];
-
-    // Add to wrong words list
     if (!wrongWords.some(word => word.kanji === currentWord.kanji)) {
         wrongWords.push(currentWord);
     }
 
     moveToNextWord();
-    
-    // Save state after skipping
     saveState();
 }
 
@@ -409,29 +286,22 @@ function skipWord() {
 function moveToNextWord() {
     currentIndex++;
 
-    // Check if we need to move to next cycle or finish
     if (currentIndex >= vocabulary.length) {
         currentIndex = 0;
         currentCycle++;
 
         if (currentCycle > totalCycles) {
-            // Learning completed
             finishLearning();
             return;
         }
     }
 
-    // Reset UI for next word
     resultDisplay.classList.add('hidden');
     meaningDisplay.textContent = '';
     answerInput.value = '';
-
-    // Update progress and show next word
     updateProgressUI();
     showCurrentWord();
     answerInput.focus();
-    
-    // Save state after moving
     saveState();
 }
 
@@ -458,27 +328,22 @@ function updateProgressUI() {
 // Function to finish learning
 function finishLearning() {
     if (wrongWords.length > 0) {
-        // Show wrong words tab
         const wrongWordsTab = document.querySelector('[data-tab="wrong"]');
         wrongWordsTab.disabled = false;
         wrongWordsTab.click();
 
-        // Fill wrong words textarea
         wrongWordsTextarea.value = wrongWords.map(word =>
             `${word.kanji}=${word.hiragana}=${word.meaning}`
         ).join('\n');
     } else {
-        // No wrong words, show congratulations
         alert('Chúc mừng! Bạn đã học tất cả từ vựng đúng!');
         document.querySelector('[data-tab="input"]').click();
     }
 
-    // Exit fullscreen
     if (document.fullscreenElement) {
         document.exitFullscreen();
     }
     
-    // Clear saved state as we've completed
     localStorage.removeItem('vocabularyLearnerState');
 }
 
